@@ -20,6 +20,8 @@ struct MenuContentView: View {
         }
         .frame(width: 300)
         .background(Color(red: 0.10, green: 0.10, blue: 0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.white.opacity(0.08), lineWidth: 1))
     }
 
     // MARK: Header
@@ -73,22 +75,17 @@ struct MenuContentView: View {
     // MARK: Controls
 
     private var controls: some View {
-        Button {
-            petWindow.isVisible.toggle()
-        } label: {
-            HStack {
+        Toggle(isOn: $petWindow.isVisible) {
+            HStack(spacing: 8) {
                 Image(systemName: "pawprint")
                 Text("Show pet")
-                Spacer()
-                Image(systemName: petWindow.isVisible ? "checkmark" : "")
-                    .foregroundStyle(Theme.accent)
             }
             .font(.system(size: 13))
             .foregroundStyle(.white)
-            .padding(.horizontal, 14).padding(.vertical, 9)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .toggleStyle(.switch)
+        .tint(Theme.accent)
+        .padding(.horizontal, 14).padding(.vertical, 8)
     }
 
     // MARK: Footer

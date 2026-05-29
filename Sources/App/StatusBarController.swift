@@ -1,15 +1,16 @@
 import AppKit
 import SwiftUI
 
-/// Owns the menu bar status item and its rich popover. A transient popover
-/// dismisses automatically on outside clicks, and we close it explicitly when
-/// opening another window.
+/// Owns the menu bar status item and a non-activating panel that drops down
+/// beneath it. Using a panel (not NSPopover) means showing it never activates
+/// the app, so the user's current window keeps keyboard focus.
 @MainActor
 final class StatusBarController: NSObject {
     static let shared = StatusBarController()
 
     private var statusItem: NSStatusItem?
-    private let popover = NSPopover()
+    private var panel: NSPanel?
+    private var outsideClickMonitor: Any?
 
     func start() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -17,23 +18,47 @@ final class StatusBarController: NSObject {
         item.button?.target = self
         item.button?.action = #selector(toggle)
         statusItem = item
-
-        popover.behavior = .transient
-        popover.animates = true
-        popover.appearance = NSAppearance(named: .darkAqua)
-        let host = NSHostingController(rootView: MenuContentView(dismiss: { [weak self] in
-            self?.popover.performClose(nil)
-        }))
-        host.sizingOptions = [.preferredContentSize]
-        popover.contentViewController = host
     }
 
     @objc private func toggle() {
-        guard let button = statusItem?.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if panel != nil { close() } else { open() }
+    }
+
+    private func open() {
+        guard let button = statusItem?.button, let buttonWindow = button.window else { return }
+
+        let hosting = NSHostingView(rootView: MenuContentView(dismiss: { [weak self] in self?.close() }))
+        hosting.setFrameSize(NSSize(width: 300, height: 400))
+        let size = hosting.fittingSize
+
+        let panel = NSPanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered, defer: false
+        )
+        panel.level = .popUpMenu
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.becomesKeyOnlyIfNeeded = true
+        panel.contentView = hosting
+
+        let buttonFrame = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        panel.setFrameOrigin(NSPoint(x: buttonFrame.maxX - size.width, y: buttonFrame.minY - size.height - 4))
+        panel.orderFrontRegardless()
+        self.panel = panel
+
+        outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            self?.close()
         }
+    }
+
+    private func close() {
+        if let outsideClickMonitor {
+            NSEvent.removeMonitor(outsideClickMonitor)
+            self.outsideClickMonitor = nil
+        }
+        panel?.orderOut(nil)
+        panel = nil
     }
 }
