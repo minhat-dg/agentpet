@@ -8,7 +8,6 @@ struct MenuContentView: View {
     @ObservedObject private var daemon = AppDaemon.shared
     @ObservedObject private var petWindow = PetWindowController.shared
     var dismiss: () -> Void
-    var arrowOffset: CGFloat = 0
 
     /// Idle sessions are historical/quiet; show only active or just-finished ones.
     private var agents: [AgentSession] {
@@ -16,19 +15,6 @@ struct MenuContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ArrowUp()
-                .fill(.regularMaterial)
-                .frame(width: 22, height: 9)
-                .offset(x: arrowOffset)
-            card
-        }
-        .frame(width: 300)
-        .environment(\.colorScheme, .dark)
-        .noFocusRing()
-    }
-
-    private var card: some View {
         VStack(spacing: 0) {
             header
             divider
@@ -38,9 +24,10 @@ struct MenuContentView: View {
             divider
             footer
         }
+        .frame(width: 300)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(.white.opacity(0.10), lineWidth: 1))
+        .environment(\.colorScheme, .dark)
+        .noFocusRing()
     }
 
     private var divider: some View { Divider().overlay(Color.white.opacity(0.08)) }
@@ -118,17 +105,6 @@ struct MenuContentView: View {
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
-    }
-}
-
-struct ArrowUp: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-        p.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        p.closeSubpath()
-        return p
     }
 }
 
