@@ -79,14 +79,15 @@ private struct GeneralTab: View {
     var body: some View {
         Form {
             Section("Launch") {
-                Toggle(isOn: Binding(get: { LoginItem.isEnabled }, set: { LoginItem.setEnabled($0) })) {
+                HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Launch at login")
                         Text("AgentPet starts automatically when you sign in.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
+                    Spacer()
+                    ColorSwitch(isOn: Binding(get: { LoginItem.isEnabled }, set: { LoginItem.setEnabled($0) }))
                 }
-                .tint(Color.systemAccent)
             }
 
             Section("Notifications") {
@@ -101,8 +102,11 @@ private struct GeneralTab: View {
             }
 
             Section("Pet chat") {
-                Toggle("Show chat bubble", isOn: $pet.showChat)
-                    .tint(Color.systemAccent)
+                HStack {
+                    Text("Show chat bubble")
+                    Spacer()
+                    ColorSwitch(isOn: $pet.showChat)
+                }
                 Picker("Messages", selection: $chat.source) {
                     Text("System").tag(ChatSettings.Source.system)
                     Text("Custom").tag(ChatSettings.Source.custom)

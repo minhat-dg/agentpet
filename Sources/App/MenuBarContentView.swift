@@ -99,11 +99,7 @@ struct MenuContentView: View {
             Image(systemName: "pawprint").foregroundStyle(.white.opacity(0.8))
             Text("Show pet").font(.system(size: 13)).foregroundStyle(.white)
             Spacer()
-            Toggle("", isOn: $petWindow.isVisible)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .tint(Color.systemAccent)
+            ColorSwitch(isOn: $petWindow.isVisible)
         }
         .padding(.horizontal, 14).padding(.vertical, 9)
     }
