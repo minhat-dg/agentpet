@@ -97,7 +97,7 @@ final class PetBrowser: ObservableObject {
             installed.insert(pet.slug)
             if let id = meta.id { PetController.shared.selectedPetID = id }
         } catch {
-            errorText = "Download failed for \(pet.displayName)."
+            errorText = "Download failed for \(pet.name)."
         }
     }
 }
