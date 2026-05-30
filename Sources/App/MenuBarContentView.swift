@@ -10,6 +10,11 @@ struct MenuContentView: View {
     var dismiss: () -> Void
     var arrowOffset: CGFloat = 0
 
+    /// Idle sessions are historical/quiet; show only active or just-finished ones.
+    private var agents: [AgentSession] {
+        daemon.sessions.filter { $0.state != .idle }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ArrowUp()
@@ -57,9 +62,9 @@ struct MenuContentView: View {
     }
 
     private var subtitle: String {
-        let total = daemon.sessions.count
+        let total = agents.count
         if total == 0 { return "No agents running" }
-        let running = daemon.sessions.filter { $0.state == .working || $0.state == .registered }.count
+        let running = agents.filter { $0.state == .working || $0.state == .registered }.count
         return "\(total) agent\(total == 1 ? "" : "s") · \(running) running"
     }
 
@@ -68,12 +73,12 @@ struct MenuContentView: View {
     private var agentSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionLabel("Agents")
-            if daemon.sessions.isEmpty {
+            if agents.isEmpty {
                 Text("Nothing running right now.")
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
                     .padding(.horizontal, 14).padding(.bottom, 12)
             } else {
-                ForEach(daemon.sessions) { AgentRow(session: $0) }
+                ForEach(agents) { AgentRow(session: $0) }
                     .padding(.bottom, 6)
             }
         }

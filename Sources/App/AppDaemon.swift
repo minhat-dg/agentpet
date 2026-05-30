@@ -21,9 +21,13 @@ final class AppDaemon: ObservableObject {
             atPath: AgentPetPaths.baseDir, withIntermediateDirectories: true
         )
 
+        // Replay queued events with their original timestamps (not "now"), so
+        // sessions that ended while the app was closed look stale and get
+        // pruned immediately instead of resurrecting as "working".
         EventSocketServer.drainQueue(directory: AgentPetPaths.queueDir) { [store] event in
-            store.apply(event, now: Date())
+            store.apply(event, now: event.timestamp)
         }
+        store.prune(now: Date())
         refresh()
 
         try? server.start { event in
