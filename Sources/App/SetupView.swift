@@ -270,6 +270,12 @@ private struct PetTab: View {
                 }
             }
 
+            if let pack = selectedPack {
+                Section("Animations") {
+                    AnimationPicker(pack: pack)
+                }
+            }
+
             Section("Size on screen") {
                 HStack {
                     Slider(value: $pet.petPoint, in: PetController.minPoint...PetController.maxPoint)
@@ -282,12 +288,6 @@ private struct PetTab: View {
                             .buttonStyle(.bordered)
                     }
                     Spacer()
-                }
-            }
-
-            if let pack = selectedPack {
-                Section("Animations") {
-                    AnimationPicker(pack: pack)
                 }
             }
         }
@@ -308,6 +308,24 @@ private struct PetTab: View {
 
 // MARK: - Components
 
+/// A single static sprite frame (no TimelineView), for grids where animating
+/// every cell would be janky. Only the hero preview animates.
+private struct StaticFrame: View {
+    let image: NSImage?
+    var size: CGFloat
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
+            } else {
+                Image(systemName: "pawprint.fill").foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 private struct PetPager: View {
     let packs: [ImagePetPack]
     let selectedID: String?
@@ -319,19 +337,23 @@ private struct PetPager: View {
     var body: some View {
         let pageCount = max(1, Int(ceil(Double(packs.count) / Double(perPage))))
         let current = min(page, pageCount - 1)
-        let slice = Array(packs.dropFirst(current * perPage).prefix(perPage))
 
         VStack(spacing: 10) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
-                ForEach(slice) { pack in
-                    PetThumb(pack: pack, selected: selectedID == pack.id) { onSelect(pack.id) }
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    ForEach(0..<pageCount, id: \.self) { p in
+                        grid(for: p).frame(width: geo.size.width)
+                    }
                 }
+                .offset(x: -CGFloat(current) * geo.size.width)
+                .animation(.easeInOut(duration: 0.28), value: current)
             }
+            .frame(height: 188)
+            .clipped()
 
             if pageCount > 1 {
-                HStack(spacing: 12) {
-                    Button { page = max(0, current - 1) } label: { Image(systemName: "chevron.left") }
-                        .buttonStyle(.plain).disabled(current == 0)
+                HStack(spacing: 14) {
+                    arrow("chevron.left", enabled: current > 0) { page = max(0, current - 1) }
                     HStack(spacing: 5) {
                         ForEach(0..<pageCount, id: \.self) { i in
                             Circle()
@@ -339,14 +361,33 @@ private struct PetPager: View {
                                 .frame(width: 6, height: 6)
                         }
                     }
-                    Button { page = min(pageCount - 1, current + 1) } label: { Image(systemName: "chevron.right") }
-                        .buttonStyle(.plain).disabled(current == pageCount - 1)
+                    arrow("chevron.right", enabled: current < pageCount - 1) { page = min(pageCount - 1, current + 1) }
                 }
-                .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)
         .onChange(of: packs.count) { _ in page = 0 }
+    }
+
+    private func grid(for pageIndex: Int) -> some View {
+        let slice = Array(packs.dropFirst(pageIndex * perPage).prefix(perPage))
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4),
+                         alignment: .leading, spacing: 12) {
+            ForEach(slice) { pack in
+                PetThumb(pack: pack, selected: selectedID == pack.id) { onSelect(pack.id) }
+            }
+        }
+    }
+
+    private func arrow(_ icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(enabled ? Color.secondary : Color.secondary.opacity(0.3))
+        .disabled(!enabled)
     }
 }
 
@@ -358,7 +399,7 @@ private struct PetThumb: View {
     var body: some View {
         Button(action: select) {
             VStack(spacing: 4) {
-                ImageSpriteView(frames: pack.clip(0), mood: .idle, size: 52)
+                StaticFrame(image: pack.clip(0).first, size: 48)
                     .frame(width: 56, height: 48)
                 Text(pack.displayName).font(.caption).lineLimit(1).frame(width: 64)
             }
@@ -392,7 +433,7 @@ private struct AnimationPicker: View {
                     store.setClip(i, mood: state, packId: pack.id, clipCount: pack.clipCount)
                 } label: {
                     VStack(spacing: 3) {
-                        ImageSpriteView(frames: pack.clip(i), mood: .idle, size: 48)
+                        StaticFrame(image: pack.clip(i).first, size: 44)
                             .frame(width: 54, height: 44)
                         Text("Clip \(i + 1)").font(.caption2).foregroundStyle(.secondary)
                     }
