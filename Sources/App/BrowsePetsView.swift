@@ -22,7 +22,14 @@ struct BrowsePetsView: View {
             }
             .padding(8)
             .background(RoundedRectangle(cornerRadius: 8).fill(.quaternary))
-            .padding(12)
+            .padding(.horizontal, 12).padding(.top, 12)
+
+            Picker("Category", selection: $browser.category) {
+                ForEach(PetBrowser.categories, id: \.value) { Text($0.label).tag($0.value) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal, 12).padding(.vertical, 8)
 
             content
         }

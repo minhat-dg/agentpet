@@ -223,6 +223,13 @@ private struct PetTab: View {
     @ObservedObject var model: SettingsModel
     let selectedPack: ImagePetPack?
     @State private var browsing = false
+    @State private var petQuery = ""
+
+    private var filteredPacks: [ImagePetPack] {
+        guard !petQuery.isEmpty else { return imagePets.packs }
+        let q = petQuery.lowercased()
+        return imagePets.packs.filter { $0.displayName.lowercased().contains(q) }
+    }
 
     var body: some View {
         Form {
@@ -247,8 +254,14 @@ private struct PetTab: View {
                 if imagePets.packs.isEmpty {
                     Text("No pets yet. Tap Browse to add one.").foregroundStyle(.secondary)
                 } else {
+                    if imagePets.packs.count > 4 {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                            TextField("Search your pets", text: $petQuery).textFieldStyle(.plain)
+                        }
+                    }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 12)], spacing: 12) {
-                        ForEach(imagePets.packs) { pack in
+                        ForEach(filteredPacks) { pack in
                             PetThumb(pack: pack, selected: pet.selectedPetID == pack.id) {
                                 pet.selectedPetID = pack.id
                             }

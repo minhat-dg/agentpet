@@ -4,6 +4,7 @@ import AgentPetCore
 struct RemotePet: Decodable, Identifiable {
     let slug: String
     let displayName: String?
+    let kind: String?
     let submittedBy: String?
     let spritesheetUrl: String
     let petJsonUrl: String
@@ -29,8 +30,13 @@ final class PetBrowser: ObservableObject {
     @Published var isLoading = false
     @Published var errorText: String?
     @Published var query = ""
+    @Published var category = "all"   // all / character / creature / object
     @Published var downloading: Set<String> = []
     @Published var installed: Set<String> = []
+
+    static let categories: [(label: String, value: String)] = [
+        ("All", "all"), ("Characters", "character"), ("Creatures", "creature"), ("Objects", "object"),
+    ]
 
     // Pet library is the public Petdex manifest API (see README acknowledgements).
     // The in-app feature is branded "Browse pets"; the source is credited in the repo.
@@ -47,9 +53,13 @@ final class PetBrowser: ObservableObject {
     private struct PackMeta: Decodable { let id: String?; let spritesheetPath: String }
 
     var results: [RemotePet] {
-        guard !query.isEmpty else { return pets }
+        var list = pets
+        if category != "all" {
+            list = list.filter { $0.kind == category }
+        }
+        guard !query.isEmpty else { return list }
         let q = query.lowercased()
-        return pets.filter { $0.name.lowercased().contains(q) || $0.slug.contains(q) }
+        return list.filter { $0.name.lowercased().contains(q) || $0.slug.contains(q) }
     }
 
     func loadIfNeeded() {
