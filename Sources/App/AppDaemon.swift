@@ -45,6 +45,12 @@ final class AppDaemon: ObservableObject {
         refresh()
     }
 
+    /// Dismisses a single session (e.g. a stuck agent).
+    func removeSession(_ id: String) {
+        store.remove(id: id)
+        refresh()
+    }
+
     private func ingest(_ event: AgentEvent) {
         let before = store.session(id: event.sessionId)?.state
         if let updated = store.apply(event, now: Date()) {

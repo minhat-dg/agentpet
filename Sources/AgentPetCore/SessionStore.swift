@@ -29,6 +29,11 @@ public final class SessionStore {
         byID.removeAll()
     }
 
+    /// Removes a single session (e.g. dismissing a stuck agent).
+    public func remove(id: String) {
+        byID.removeValue(forKey: id)
+    }
+
     /// Applies an event, creating or updating the matching session.
     /// Returns the updated session, or `nil` if the event maps to no state.
     @discardableResult

@@ -66,8 +66,10 @@ struct MenuContentView: View {
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.4))
                     .padding(.horizontal, 14).padding(.bottom, 12)
             } else {
-                ForEach(agents) { AgentRow(session: $0) }
-                    .padding(.bottom, 6)
+                ForEach(agents) { session in
+                    AgentRow(session: session, onClear: { daemon.removeSession(session.id) })
+                }
+                .padding(.bottom, 6)
             }
         }
     }
@@ -132,6 +134,8 @@ private struct FooterButton: View {
 
 private struct AgentRow: View {
     let session: AgentSession
+    var onClear: () -> Void = {}
+    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -143,13 +147,22 @@ private struct AgentRow: View {
                     .lineLimit(1).truncationMode(.tail)
             }
             Spacer(minLength: 8)
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                Text(timeString(now: context.date))
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.55))
+            if hovering {
+                Button(action: onClear) {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.45))
+                }
+                .buttonStyle(.plain)
+            } else {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(timeString(now: context.date))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 6)
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
     }
 
     private var project: String {
