@@ -28,32 +28,3 @@ final class MoodResolverTests: XCTestCase {
         XCTAssertEqual(MoodResolver.aggregate([session(.done, id: "a"), session(.idle, id: "b")]), .done)
     }
 }
-
-final class PetPackTests: XCTestCase {
-    func testDecodeAndLookup() throws {
-        let json = #"""
-        {"name":"Test","version":1,"kind":"emoji",
-         "states":{"idle":{"frames":["🐶"],"fps":1},"working":{"frames":["🐶","🦴"],"fps":2}}}
-        """#
-        let pack = try JSONDecoder().decode(PetPack.self, from: Data(json.utf8))
-        XCTAssertEqual(pack.name, "Test")
-        XCTAssertEqual(pack.kind, .emoji)
-        XCTAssertEqual(pack.animation(for: .working).frames, ["🐶", "🦴"])
-    }
-
-    func testMissingMoodFallsBackToIdle() throws {
-        let json = #"{"name":"T","version":1,"kind":"emoji","states":{"idle":{"frames":["🐶"],"fps":1}}}"#
-        let pack = try JSONDecoder().decode(PetPack.self, from: Data(json.utf8))
-        XCTAssertEqual(pack.animation(for: .celebrate).frames, ["🐶"], "missing mood uses idle")
-        XCTAssertTrue(pack.missingMoods.contains(.working))
-    }
-
-    func testBuiltinsLoadAndAreComplete() {
-        let packs = PetPackLoader.loadBuiltins()
-        XCTAssertEqual(packs.map(\.name), ["Bear", "Cat", "Robot"])
-        for pack in packs {
-            XCTAssertEqual(pack.kind, .emoji)
-            XCTAssertTrue(pack.missingMoods.isEmpty, "\(pack.name) missing \(pack.missingMoods)")
-        }
-    }
-}

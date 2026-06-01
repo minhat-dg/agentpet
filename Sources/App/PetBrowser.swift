@@ -50,8 +50,6 @@ final class PetBrowser: ObservableObject {
         }
         enum CodingKeys: String, CodingKey { case pets }
     }
-    private struct PackMeta: Decodable { let id: String?; let spritesheetPath: String }
-
     var results: [RemotePet] {
         var list = pets
         if category != "all" {
@@ -90,27 +88,15 @@ final class PetBrowser: ObservableObject {
     }
 
     private func performDownload(_ pet: RemotePet) async {
-        do {
-            let fm = FileManager.default
-            let dir = URL(fileURLWithPath: AgentPetPaths.baseDir)
-                .appendingPathComponent("pets").appendingPathComponent(pet.slug)
-            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-
-            guard let petJsonURL = URL(string: pet.petJsonUrl),
-                  let sheetURL = URL(string: pet.spritesheetUrl) else { return }
-
-            let (petJsonData, _) = try await URLSession.shared.data(from: petJsonURL)
-            let meta = try JSONDecoder().decode(PackMeta.self, from: petJsonData)
-            try petJsonData.write(to: dir.appendingPathComponent("pet.json"))
-
-            let (sheetData, _) = try await URLSession.shared.data(from: sheetURL)
-            try sheetData.write(to: dir.appendingPathComponent(meta.spritesheetPath))
-
-            ImagePetStore.shared.reload()
-            installed.insert(pet.slug)
-            if let id = meta.id { PetController.shared.selectedPetID = id }
-        } catch {
+        guard let petJsonURL = URL(string: pet.petJsonUrl),
+              let sheetURL = URL(string: pet.spritesheetUrl) else { return }
+        let id = await PetInstaller.download(slug: pet.slug, petJsonURL: petJsonURL, spritesheetURL: sheetURL)
+        guard let id else {
             errorText = "Download failed for \(pet.name)."
+            return
         }
+        ImagePetStore.shared.reload()
+        installed.insert(pet.slug)
+        PetController.shared.selectedPetID = id
     }
 }

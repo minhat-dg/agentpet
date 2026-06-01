@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PetWindowController.shared.start()
         AppDaemon.shared.start()
         StatusBarController.shared.start()
+        DefaultPetBootstrap.installIfNeeded()
         SettingsWindowController.shared.showOnFirstLaunch()
     }
 }
