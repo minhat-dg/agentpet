@@ -39,7 +39,7 @@ final class StatusBarController: NSObject, ObservableObject {
 
     func start() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "AgentPet")
+        item.button?.image = Self.menuBarImage(count: nil, waiting: false)
         item.button?.imagePosition = .imageLeading
         item.button?.target = self
         item.button?.action = #selector(toggle)
@@ -76,19 +76,51 @@ final class StatusBarController: NSObject, ObservableObject {
         let hasAgents = waiting > 0 || running > 0
         let color: NSColor = waiting > 0 ? .systemOrange : .labelColor
 
+        button.title = ""
         if showCount, hasAgents {
             let count = waiting > 0 ? waiting : running
-            button.attributedTitle = NSAttributedString(string: "\(count)", attributes: [
-                .foregroundColor: color,
-                .font: NSFont.systemFont(ofSize: 13, weight: .bold),
-                .baselineOffset: 0.5,
-            ])
-            button.imageHugsTitle = true
+            button.image = Self.menuBarImage(count: count, waiting: waiting > 0)
         } else {
-            button.title = ""
+            button.image = Self.menuBarImage(count: nil, waiting: false)
         }
 
         refreshChatBubble()
+    }
+
+    private static let pawConfig = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
+
+    /// Builds the menu bar image: the paw alone, or the paw plus a count laid out
+    /// as a centered row (both centered vertically by their bounding boxes, so the
+    /// digit never sits high or low relative to the icon).
+    private static func menuBarImage(count: Int?, waiting: Bool) -> NSImage? {
+        guard let paw = NSImage(systemSymbolName: "pawprint.fill", accessibilityDescription: "AgentPet")?
+            .withSymbolConfiguration(pawConfig) else { return nil }
+
+        guard let count else {
+            paw.isTemplate = true
+            return paw
+        }
+
+        let font = NSFont.systemFont(ofSize: 13, weight: .bold)
+        let text = "\(count)" as NSString
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+        let textSize = text.size(withAttributes: attrs)
+        let pawSize = paw.size
+        let gap: CGFloat = 3
+        let w = ceil(pawSize.width + gap + textSize.width)
+        let h = ceil(max(pawSize.height, textSize.height))
+
+        let img = NSImage(size: NSSize(width: w, height: h))
+        img.lockFocus()
+        paw.draw(in: NSRect(x: 0, y: (h - pawSize.height) / 2, width: pawSize.width, height: pawSize.height))
+        text.draw(at: NSPoint(x: pawSize.width + gap, y: (h - textSize.height) / 2), withAttributes: attrs)
+        if waiting {
+            NSColor.systemOrange.set()
+            NSRect(x: 0, y: 0, width: w, height: h).fill(using: .sourceAtop)
+        }
+        img.unlockFocus()
+        img.isTemplate = !waiting
+        return img
     }
 
     // MARK: - Chat bubble dropping from the menu bar
