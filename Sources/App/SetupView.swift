@@ -395,17 +395,14 @@ private struct PetTab: View {
             }
 
             Section("Size on screen") {
-                HStack {
+                HStack(spacing: 10) {
                     Slider(value: $pet.petPoint, in: PetController.minPoint...PetController.maxPoint)
                     Text("\(Int(pet.petPoint))")
-                        .monospacedDigit().foregroundStyle(.secondary).frame(width: 36, alignment: .trailing)
-                }
-                HStack {
+                        .monospacedDigit().foregroundStyle(.secondary).frame(width: 32, alignment: .trailing)
                     ForEach(PetController.presets, id: \.0) { preset in
                         Button(preset.0) { pet.animateSize(to: preset.1) }
                             .buttonStyle(.bordered)
                     }
-                    Spacer()
                 }
             }
         }
