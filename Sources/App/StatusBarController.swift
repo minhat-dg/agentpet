@@ -74,7 +74,6 @@ final class StatusBarController: NSObject, ObservableObject {
         let running = active.filter { $0.state == .working || $0.state == .registered }.count
 
         let hasAgents = waiting > 0 || running > 0
-        let color: NSColor = waiting > 0 ? .systemOrange : .labelColor
 
         button.title = ""
         if showCount, hasAgents {

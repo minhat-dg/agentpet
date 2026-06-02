@@ -25,7 +25,16 @@ cp "$ROOT/scripts/AppInfo.plist" "$APP/Contents/Info.plist"
 # Bundle.module, so we deliberately do not copy it (it has no Info.plist and
 # would break code signing). The app needs no runtime resource bundle.
 
+# Bundle Sparkle.framework (auto-update). SwiftPM links it via @rpath but does
+# not place it inside a hand-assembled .app, so we copy it into Frameworks and
+# point the binary's rpath there. ditto preserves the framework symlinks.
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$BINDIR/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/agentpet" 2>/dev/null || true
+
 # Ad-hoc sign for local testing (release.sh re-signs with a Developer ID).
+# Sign the framework first (inside-out) so the outer app signature is valid.
+codesign --force --sign - "$APP/Contents/Frameworks/Sparkle.framework" || true
 codesign --force --sign - "$APP" || echo "warning: codesign failed (continuing unsigned)"
 
 echo "Done: $APP"

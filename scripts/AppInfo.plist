@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.2</string>
+	<string>0.1.3</string>
 	<key>CFBundleVersion</key>
-	<string>0.1.2</string>
+	<string>0.1.3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>
@@ -26,5 +26,11 @@
 	<string>MIT License</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://ntd4996.github.io/agentpet/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>2wE8euYD3TUI39c6UhWHbYlhHpXkeM5NiJTJywrm0xQ=</string>
 </dict>
 </plist>

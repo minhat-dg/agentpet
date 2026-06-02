@@ -24,6 +24,22 @@ echo "==> Signing with Developer ID (hardened runtime)"
 while IFS= read -r -d '' nested; do
     codesign --force --options runtime --timestamp --sign "$IDENTITY" "$nested"
 done < <(find "$APP/Contents/Resources" -name "*.bundle" -print0 2>/dev/null)
+
+# Sparkle.framework ships nested XPC services and helper apps that each must be
+# signed inside-out (deepest first) with the hardened runtime before the app.
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+if [ -d "$SPARKLE" ]; then
+    SV="$SPARKLE/Versions/B"
+    for nested in \
+        "$SV/XPCServices/Downloader.xpc" \
+        "$SV/XPCServices/Installer.xpc" \
+        "$SV/Autoupdate" \
+        "$SV/Updater.app"; do
+        codesign --force --options runtime --timestamp --sign "$IDENTITY" "$nested"
+    done
+    codesign --force --options runtime --timestamp --sign "$IDENTITY" "$SPARKLE"
+fi
+
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP/Contents/MacOS/agentpet"
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
@@ -45,6 +61,22 @@ else
     xcrun stapler staple "$APP"
 fi
 
+echo "==> Signing update for Sparkle appcast"
+SIGN_UPDATE="$(find "$ROOT/.build/artifacts" -name sign_update -path '*Sparkle*' 2>/dev/null | head -1)"
+ED_ATTRS="$("$SIGN_UPDATE" "$DMG")"   # emits: sparkle:edSignature="..." length="..."
+
 echo "==> Done"
 echo "DMG:    $DMG"
 echo "SHA256: $(shasum -a 256 "$DMG" | awk '{print $1}')"
+echo ""
+echo "Appcast <item> (paste into docs/appcast.xml, then commit + push for Pages):"
+cat <<EOF
+        <item>
+            <title>$VERSION</title>
+            <sparkle:version>$VERSION</sparkle:version>
+            <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/ntd4996/agentpet/releases/download/v$VERSION/AgentPet-$VERSION.dmg"
+                       $ED_ATTRS type="application/octet-stream" />
+        </item>
+EOF

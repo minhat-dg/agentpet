@@ -138,6 +138,12 @@ struct MenuContentView: View {
                     SettingsWindowController.shared.show()
                 }
             }
+            FooterButton(icon: "arrow.triangle.2.circlepath", label: "Updates") {
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    UpdaterController.shared.checkForUpdates()
+                }
+            }
             Spacer()
             FooterButton(icon: "power", label: "Quit") {
                 NSApplication.shared.terminate(nil)
