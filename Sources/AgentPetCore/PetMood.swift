@@ -16,7 +16,8 @@ public enum PetMood: String, Codable, Sendable, CaseIterable {
 public enum MoodResolver {
     public static func aggregate(_ sessions: [AgentSession]) -> PetMood {
         // Running work takes priority: the pet reflects what is active now.
-        if sessions.contains(where: { $0.state == .working || $0.state == .registered }) { return .working }
+        // `registered` (agent open but idle) is not "working".
+        if sessions.contains(where: { $0.state == .working }) { return .working }
         if sessions.contains(where: { $0.state == .waiting }) { return .waiting }
         if sessions.contains(where: { $0.state == .done }) { return .done }
         return .idle

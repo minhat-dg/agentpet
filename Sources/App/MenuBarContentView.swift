@@ -11,9 +11,11 @@ struct MenuContentView: View {
     @ObservedObject private var pet = PetController.shared
     var dismiss: () -> Void
 
-    /// Idle sessions are historical/quiet; show only active or just-finished ones.
+    /// Show agents that are doing something or just finished. Idle and merely
+    /// `registered` (open but not working) sessions are hidden, so an idle
+    /// terminal doesn't sit in the list; they reappear the moment they work.
     private var agents: [AgentSession] {
-        daemon.sessions.filter { $0.state != .idle }
+        daemon.sessions.filter { $0.state != .idle && $0.state != .registered }
     }
 
     var body: some View {

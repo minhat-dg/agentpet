@@ -20,8 +20,11 @@ final class MoodResolverTests: XCTestCase {
         XCTAssertEqual(MoodResolver.aggregate([session(.done, id: "a"), session(.waiting, id: "b")]), .waiting)
     }
 
-    func testRegisteredCountsAsWorking() {
-        XCTAssertEqual(MoodResolver.aggregate([session(.registered, id: "a")]), .working)
+    func testRegisteredIsNotWorking() {
+        // An agent that is merely open (registered) but not doing anything keeps
+        // the pet idle, not "working".
+        XCTAssertEqual(MoodResolver.aggregate([session(.registered, id: "a")]), .idle)
+        XCTAssertEqual(MoodResolver.aggregate([session(.registered, id: "a"), session(.working, id: "b")]), .working)
     }
 
     func testDoneOnly() {
