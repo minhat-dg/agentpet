@@ -100,6 +100,29 @@ final class MultiAgentHookTests: XCTestCase {
         XCTAssertEqual(StateMapper.state(for: .opencode, eventName: "session.idle"), .done)
     }
 
+    // MARK: - Session end clears the session
+
+    func testSessionEndRemovesSession() {
+        let store = SessionStore()
+        let now = Date()
+        let start = AgentEvent(sessionId: "s1", agentKind: .claude, eventName: "SessionStart",
+                               project: "/p", message: nil, timestamp: now)
+        XCTAssertNotNil(store.apply(start, now: now))
+        XCTAssertEqual(store.sessions.count, 1)
+        let end = AgentEvent(sessionId: "s1", agentKind: .claude, eventName: "SessionEnd",
+                             project: "/p", message: nil, timestamp: now)
+        XCTAssertNil(store.apply(end, now: now), "SessionEnd maps to no state")
+        XCTAssertEqual(store.sessions.count, 0, "session cleared on quit")
+    }
+
+    func testIsSessionEnd() {
+        XCTAssertTrue(StateMapper.isSessionEnd(for: .claude, eventName: "SessionEnd"))
+        XCTAssertTrue(StateMapper.isSessionEnd(for: .gemini, eventName: "SessionEnd"))
+        XCTAssertTrue(StateMapper.isSessionEnd(for: .cursor, eventName: "sessionEnd"))
+        XCTAssertFalse(StateMapper.isSessionEnd(for: .claude, eventName: "Stop"))
+        XCTAssertFalse(StateMapper.isSessionEnd(for: .codex, eventName: "Stop"))
+    }
+
     // MARK: - Disk round-trip for each new style
 
     func testDiskRoundTripAllStyles() throws {

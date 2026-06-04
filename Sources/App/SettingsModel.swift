@@ -47,6 +47,24 @@ final class SettingsModel: ObservableObject {
         installedKinds.contains(kind)
     }
 
+    /// Re-applies hooks for already-installed agents once per app version, so
+    /// existing users pick up newly-added events (e.g. SessionEnd for instant
+    /// clear on quit) without manually re-installing. Idempotent and only
+    /// touches our own hook entries.
+    func migrateInstalledHooksIfNeeded() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        let key = "agentpet.hookMigration.\(version)"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        for agent in agents where agent.isSupported {
+            guard let spec = AgentHooks.spec(for: agent.kind),
+                  HookInstaller.isInstalledOnDisk(path: spec.settingsPath, events: spec.events, style: spec.style)
+            else { continue }
+            try? HookInstaller.installToDisk(command: hookCommand(for: agent.kind),
+                                             path: spec.settingsPath, events: spec.events, style: spec.style)
+        }
+    }
+
     private func hookCommand(for kind: AgentKind) -> String {
         let path = Bundle.main.executablePath ?? CommandLine.arguments.first ?? "agentpet"
         return "\"\(path)\" hook --agent \(kind.rawValue)"

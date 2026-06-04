@@ -38,10 +38,10 @@ final class StateMapperTests: XCTestCase {
     }
 
     func testHookSpecsCoverInstallEvents() {
-        // Every event we register must map to a state for that agent.
+        // Every event we register must either map to a state or end the session.
         for kind in [AgentKind.claude, .codex, .gemini] {
             let spec = AgentHooks.spec(for: kind)!
-            for event in spec.events {
+            for event in spec.events where !StateMapper.isSessionEnd(for: kind, eventName: event) {
                 XCTAssertNotNil(StateMapper.state(for: kind, eventName: event), "\(kind) \(event)")
             }
         }

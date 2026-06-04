@@ -38,6 +38,12 @@ public final class SessionStore {
     /// Returns the updated session, or `nil` if the event maps to no state.
     @discardableResult
     public func apply(_ event: AgentEvent, now: Date) -> AgentSession? {
+        // A session-end event (agent quit/closed) removes the session at once,
+        // so it doesn't linger as "done" until the idle timeout.
+        if StateMapper.isSessionEnd(for: event.agentKind, eventName: event.eventName) {
+            byID.removeValue(forKey: event.sessionId)
+            return nil
+        }
         guard let state = StateMapper.state(for: event.agentKind, eventName: event.eventName) else {
             return nil
         }

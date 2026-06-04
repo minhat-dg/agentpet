@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PetController.shared.start()
         PetWindowController.shared.start()
         AppDaemon.shared.start()
+        SettingsModel.shared.migrateInstalledHooksIfNeeded()
         _ = UpdaterController.shared
         StatusBarController.shared.start()
         DefaultPetBootstrap.installIfNeeded()

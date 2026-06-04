@@ -5,6 +5,17 @@ import Foundation
 /// Returns `nil` for events that should not change state (unknown or
 /// irrelevant events are ignored rather than treated as an error).
 public enum StateMapper {
+    /// Events that mean the whole session ended (the agent was quit/closed), so
+    /// the session should be removed immediately rather than lingering as done.
+    public static func isSessionEnd(for kind: AgentKind, eventName: String) -> Bool {
+        switch kind {
+        case .claude: return eventName == "SessionEnd"
+        case .gemini: return eventName == "SessionEnd"
+        case .cursor: return eventName == "sessionEnd"
+        default: return false
+        }
+    }
+
     public static func state(for kind: AgentKind, eventName: String) -> AgentState? {
         // Generic: any caller (e.g. the `agentpet run` wrapper) can send a
         // normalised state name directly.
