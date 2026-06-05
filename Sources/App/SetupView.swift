@@ -31,7 +31,7 @@ struct SetupView: View {
                 }
             }
         }
-        .frame(width: 560, height: 600)
+        .frame(width: 640, height: 600)
         .preferredColorScheme(.dark)
         .noFocusRing()
         .onAppear { model.refresh() }
@@ -356,6 +356,7 @@ private struct PetTab: View {
     @ObservedObject var model: SettingsModel
     let selectedPack: ImagePetPack?
     @State private var browsing = false
+    @State private var creating = false
     @State private var petQuery = ""
 
     private var filteredPacks: [ImagePetPack] {
@@ -398,8 +399,13 @@ private struct PetTab: View {
                                  if wasSelected { pet.selectedPetID = imagePets.packs.first?.id }
                              })
                 }
-                Button { browsing = true } label: {
-                    Label("Browse pets…", systemImage: "square.grid.2x2")
+                HStack {
+                    Button { browsing = true } label: {
+                        Label("Browse pets…", systemImage: "square.grid.2x2")
+                    }
+                    Button { creating = true } label: {
+                        Label("Create pet…", systemImage: "square.and.pencil")
+                    }
                 }
             }
 
@@ -424,6 +430,16 @@ private struct PetTab: View {
         .formStyle(.grouped)
         .sheet(isPresented: $browsing) {
             BrowsePetsView(onClose: { browsing = false })
+        }
+        .sheet(isPresented: $creating) {
+            CreatePetView(
+                onCreate: { id in
+                    creating = false
+                    imagePets.reload()
+                    pet.selectedPetID = id
+                },
+                onCancel: { creating = false }
+            )
         }
     }
 
