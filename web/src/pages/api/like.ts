@@ -40,5 +40,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     liked = true;
   }
   const row: any = await db.prepare("SELECT COUNT(*) AS c FROM pet_likes WHERE slug=?").bind(slug).first();
-  return json({ likes: row?.c ?? 0, liked });
+  const count = row?.c ?? 0;
+  // Keep the running total in pet_stats so the public counts query stays cheap.
+  await db
+    .prepare("INSERT INTO pet_stats (slug, likes) VALUES (?, ?) ON CONFLICT(slug) DO UPDATE SET likes = excluded.likes")
+    .bind(slug, count)
+    .run();
+  return json({ likes: count, liked });
 };
