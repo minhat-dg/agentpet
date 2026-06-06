@@ -219,7 +219,8 @@ public enum HookInstaller {
         let dir = (path as NSString).deletingLastPathComponent
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
-        try data.write(to: URL(fileURLWithPath: path))
+        // Atomic so a crash mid-write can never leave a truncated settings file.
+        try data.write(to: URL(fileURLWithPath: path), options: .atomic)
     }
 
     public static func installToDisk(command: String, path: String = defaultSettingsPath(),
@@ -235,7 +236,7 @@ public enum HookInstaller {
             let dir = (path as NSString).deletingLastPathComponent
             try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
             let js = opencodePlugin(binary: binaryPath(fromCommand: command))
-            try Data(js.utf8).write(to: URL(fileURLWithPath: path))
+            try Data(js.utf8).write(to: URL(fileURLWithPath: path), options: .atomic)
         }
     }
 
