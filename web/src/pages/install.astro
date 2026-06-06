@@ -17,8 +17,8 @@ const platforms = [
 ];
 
 const requirements = [
-  "macOS 13 Ventura or later — macOS 14 Sonoma+ recommended.",
-  "Apple Silicon (M1–M4) and Intel Macs are both supported.",
+  "macOS 13 Ventura or later (macOS 14 Sonoma+ recommended).",
+  "Apple Silicon (M1 to M4) and Intel Macs are both supported.",
   "Developer ID-signed and notarized, so it opens without a Gatekeeper warning.",
   "Updates itself: checks automatically, or update in-app from the menu bar.",
 ];
@@ -38,13 +38,13 @@ cd agentpet
 ./scripts/build-app.sh release
 open build/AgentPet.app`;
 ---
-<Base title="Install AgentPet — download for macOS" description="Download and install AgentPet. Homebrew or a notarized DMG for macOS, with Windows and Linux on the way." active="">
+<Base title="Install AgentPet · download for macOS" description="Download and install AgentPet. Homebrew or a notarized DMG for macOS, with Windows and Linux on the way." active="">
   <Hero
     eyebrow="Download"
     icon="download"
     title="Install"
     accent="AgentPet"
-    lead="Adopt a pixel companion for your AI coding agents. Free, open source, and notarized by Apple — pick Homebrew or a direct download below."
+    lead="Adopt a pixel companion for your AI coding agents. Free, open source, and notarized by Apple. Pick Homebrew or a direct download below."
   >
     <a href={RELEASE_LATEST} target="_blank" rel="noopener" class="btn-primary !px-6 !py-3.5 text-base"><Icon name="apple" class="h-5 w-5" /> Download for macOS</a>
     <a href={GITHUB} target="_blank" rel="noopener" class="btn-ghost !px-6 !py-3.5 text-base"><Icon name="github" class="h-4 w-4" /> Star on GitHub</a>

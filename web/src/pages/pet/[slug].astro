@@ -25,7 +25,7 @@ const featured = f % 4 === 0;
 const likes = stat("l", 880, 24), downloads = stat("d", 7400, 130), usage = stat("u", 2400, 12);
 const GITHUB = "https://github.com/ntd4996/agentpet";
 ---
-<Base title={`${pet.displayName} — AgentPet`} description={pet.description} active="gallery">
+<Base title={`${pet.displayName} · AgentPet`} description={pet.description} active="gallery">
   <section class="px-4 pt-8 pb-4">
     <div class="mx-auto max-w-6xl">
       <a href="/gallery" class="group inline-flex items-center gap-2 rounded-full border border-line bg-white/80 py-1.5 pl-1.5 pr-4 text-sm font-semibold text-muted shadow-soft backdrop-blur transition hover:border-brand-300 hover:text-brand-700">
@@ -50,7 +50,7 @@ const GITHUB = "https://github.com/ntd4996/agentpet";
             <div class="flex items-center justify-between">
               <div class="font-display text-lg font-bold text-ink" id="viewerState">Idle</div>
               <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 font-pixel text-[11px] tracking-wide text-brand-700">
-                <Icon name="bolt" class="h-3.5 w-3.5" /> <span id="viewerFrames">—</span>
+                <Icon name="bolt" class="h-3.5 w-3.5" /> <span id="viewerFrames">…</span>
               </span>
             </div>
             <p class="mt-1 text-sm text-muted" id="viewerCaption">Neutral breathing and blinking loop.</p>
@@ -89,7 +89,7 @@ const GITHUB = "https://github.com/ntd4996/agentpet";
             <Icon name="grid" class="h-5 w-5 text-brand-500" />
             <h2 class="font-display text-2xl font-bold text-ink">State viewer</h2>
           </div>
-          <span class="font-pixel text-[12px] tracking-wide text-faint"><span id="stateCount">—</span> states</span>
+          <span class="font-pixel text-[12px] tracking-wide text-faint"><span id="stateCount">…</span> states</span>
         </div>
         <div id="stateGrid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div class="card p-5 text-sm text-muted">Loading animations…</div>
