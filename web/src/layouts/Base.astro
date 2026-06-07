@@ -62,32 +62,57 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
   </div>
 
   <header class="sticky top-3 z-30 px-4">
-    <nav class="nav-pill mx-auto flex max-w-6xl items-center gap-2 rounded-full px-3 py-2">
-      <a href="/" class="flex items-center gap-2 pl-1 pr-1 font-display text-lg font-bold text-ink">
+    <nav class="nav-pill mx-auto flex max-w-7xl items-center gap-2 rounded-full px-3 py-2">
+      <a href="/" class="flex shrink-0 items-center gap-2 pl-1 pr-1 font-display text-lg font-bold text-ink">
         <img src="/logo.png" alt="" class="h-9 w-9 rounded-xl" />
         <span>Agent<span class="text-brand-600">Pet</span></span>
       </a>
-      <div class="ml-1 hidden items-center gap-0.5 md:flex">
+      <!-- inline nav: only when there's room (xl+) -->
+      <div class="ml-1 hidden items-center gap-0.5 xl:flex">
         {nav.map((n) => (
           <a href={n.href} class={`nav-link ${active === n.key ? "active" : ""}`}>{n.label}</a>
         ))}
       </div>
-      <div class="ml-auto flex items-center gap-2">
+      <div class="ml-auto flex shrink-0 items-center gap-1.5">
         <a href={DISCORD} target="_blank" rel="noopener" aria-label="Discord" class="hidden rounded-full p-2.5 text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-flex">
           <Icon name="discord" />
         </a>
-        <a href={GITHUB} target="_blank" rel="noopener" class="hidden btn-ghost !px-4 !py-2 sm:inline-flex">
-          <Icon name="github" class="h-4 w-4" /> GitHub
+        <a href={GITHUB} target="_blank" rel="noopener" aria-label="GitHub" class="hidden rounded-full p-2.5 text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-flex">
+          <Icon name="github" class="h-5 w-5" />
         </a>
         <div id="ap-auth" class="flex items-center">
-          <a href="/api/auth/login?returnTo=/" class="btn-ghost !px-4 !py-2"><Icon name="users" class="h-4 w-4" /> Sign in</a>
+          <a href="/api/auth/login?returnTo=/" class="btn-ghost !px-3 !py-2"><Icon name="users" class="h-4 w-4" /> <span class="hidden sm:inline">Sign in</span></a>
         </div>
         <a href="/install" class="btn-primary !px-4 !py-2">
-          <Icon name="download" class="h-4 w-4" /> Get the app
+          <Icon name="download" class="h-4 w-4" /> <span class="hidden sm:inline">Get the app</span>
         </a>
+        <!-- menu toggle: below xl -->
+        <button id="navToggle" type="button" aria-label="Menu" aria-expanded="false" class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted transition hover:bg-brand-50 hover:text-brand-700 xl:hidden">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-5 w-5"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
       </div>
     </nav>
+    <!-- collapsed nav menu -->
+    <div id="navMenu" class="mx-auto mt-2 hidden max-w-7xl px-1 xl:!hidden">
+      <div class="rounded-2xl border border-line bg-white p-2 shadow-card">
+        {nav.map((n) => (
+          <a href={n.href} class={`block rounded-xl px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-700 ${active === n.key ? "bg-brand-50 text-brand-700" : "text-muted"}`}>{n.label}</a>
+        ))}
+      </div>
+    </div>
   </header>
+  <script>
+    (() => {
+      const t = document.getElementById("navToggle");
+      const m = document.getElementById("navMenu");
+      if (!t || !m) return;
+      t.addEventListener("click", () => {
+        const hidden = m.classList.toggle("hidden");
+        t.setAttribute("aria-expanded", String(!hidden));
+      });
+      m.addEventListener("click", (e) => { if ((e.target as HTMLElement).closest("a")) m.classList.add("hidden"); });
+    })();
+  </script>
 
   <main class="relative">
     <slot />
