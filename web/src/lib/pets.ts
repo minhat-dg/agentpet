@@ -53,3 +53,11 @@ export function applyOverrides(pets: ManifestPet[], ovr: OverrideMap, includeHid
 // The category vocabulary the gallery/admin offer. Derived from the real data
 // (petdex: character/creature/object, openpets: asian/western).
 export const KIND_OPTIONS = ["character", "creature", "asian", "western", "object"];
+
+// URL/slug-safe id from a display name (community submissions get a short suffix
+// added by the caller to guarantee global uniqueness vs the mirrored library).
+export function slugify(name: string): string {
+  return (
+    name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "pet"
+  );
+}

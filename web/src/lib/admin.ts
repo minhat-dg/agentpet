@@ -30,3 +30,10 @@ export async function adminUser(cookies: { get(n: string): { value: string } | u
   if (!user || !isAdmin(user.login)) return null;
   return user;
 }
+
+// Any signed-in user (or null). Used to gate community actions like /submit.
+export async function currentUser(cookies: { get(n: string): { value: string } | undefined }): Promise<SessionUser | null> {
+  const token = cookies.get(SESSION_COOKIE)?.value || "";
+  if (!token) return null;
+  return verifySession(token, sessionSecret());
+}
