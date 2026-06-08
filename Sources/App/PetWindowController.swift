@@ -136,12 +136,11 @@ final class PetWindowController: ObservableObject {
         if anchorBottomCenter == nil { syncAnchorFromWindow() }
         guard let anchor = anchorBottomCenter else { return }
 
-        var origin = NSPoint(x: anchor.x - size.width / 2, y: anchor.y)
-        let probe = NSRect(origin: origin, size: size)
-        if let visible = currentScreen(for: probe)?.visibleFrame {
-            origin.x = min(max(origin.x, visible.minX), visible.maxX - size.width)
-            origin.y = min(max(origin.y, visible.minY), visible.maxY - size.height)
-        }
+        // Pure anchor math only — no on-screen clamping here. Clamping would
+        // shift the panel (and the pet inside it) whenever the bubble grows
+        // near a screen edge, which is exactly the drift we want to avoid.
+        // The bubble may run off-screen at extremes; the pet never moves.
+        let origin = NSPoint(x: anchor.x - size.width / 2, y: anchor.y)
         panel.setFrame(NSRect(origin: origin, size: size), display: true, animate: false)
     }
 
