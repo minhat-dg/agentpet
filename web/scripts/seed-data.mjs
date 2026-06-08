@@ -35,6 +35,11 @@ const RULES = [
   { id: "auto-magic", title: "Magic & Potions", slug: "magic-and-potions", desc: "Spellcasters and arcane trinkets.", kw: ["magic", "potion", "crystal", "spell", "sorcerer", "alchemy", "rune", "enchant", "staff"] },
   { id: "auto-slime", title: "Slimes & Blobs", slug: "slimes-and-blobs", desc: "Squishy, jiggly little blobs.", kw: ["slime", "blob", "goo", "gel"] },
   { id: "auto-monster", title: "Monsters", slug: "monsters", desc: "Beasts, ogres, and friendly fiends.", kw: ["monster", "beast", "ogre", "troll", "kraken", "behemoth", "fiend", "yeti"] },
+  { id: "auto-anime", title: "Anime & Manga", slug: "anime-and-manga", desc: "Icons and heroes from anime and manga.", kw: ["anime", "manga", "naruto", "sasuke", "goku", "saiyan", "dragon ball", "luffy", "zoro", "sailor moon", "gojo", "tanjiro", "nezuko", "eren", "mikasa", "waifu", "senpai", "jojo", "ichigo", "deku", "chainsaw man", "makima"] },
+  { id: "auto-pokemon", title: "Pokemon Pals", slug: "pokemon-pals", desc: "Pocket monsters and their friends.", kw: ["pokemon", "pikachu", "charizard", "bulbasaur", "eevee", "snorlax", "gengar", "mewtwo", "squirtle", "jigglypuff", "psyduck", "charmander", "ditto", "pichu"] },
+  { id: "auto-lol", title: "League of Legends", slug: "league-of-legends", desc: "Champions straight from the Rift.", kw: ["league of legends", "jinx", "yasuo", "ahri", "teemo", "lux", "garen", "zed", "akali", "ezreal", "katarina", "lee sin", "poro", "darius", "yuumi"] },
+  { id: "auto-games", title: "Gaming Icons", slug: "gaming-icons", desc: "Faces from the games we love.", kw: ["minecraft", "creeper", "mario", "luigi", "zelda", "sonic", "kirby", "among us", "fortnite", "valorant", "genshin", "elden", "stardew", "roblox", "pacman", "pac-man", "tetris", "fall guys", "undertale", "cuphead", "doomguy"] },
+  { id: "auto-ghibli", title: "Studio Ghibli", slug: "studio-ghibli", desc: "Cozy spirits from Ghibli films.", kw: ["ghibli", "totoro", "no-face", "kaonashi", "kiki", "howl", "ponyo", "calcifer", "soot sprite"] },
   { id: "auto-objects", title: "Curious Objects", slug: "curious-objects", desc: "Everyday things brought to pixel life.", kw: [], kind: ["object"] },
   { id: "auto-asian", title: "Eastern Art Style", slug: "eastern-style", desc: "Companions drawn in an Eastern art style.", kw: [], kind: ["asian"] },
   { id: "auto-western", title: "Western Art Style", slug: "western-style", desc: "Companions drawn in a Western art style.", kw: [], kind: ["western"] },
@@ -73,7 +78,7 @@ sql += "DELETE FROM pet_numbers;\n";
 for (const c of chunk(numRows, 400)) sql += `INSERT INTO pet_numbers (slug, num) VALUES ${c.join(",")};\n`;
 
 // upsert auto collections (fixed ids; safe re-run), then reset their members
-sql += "DELETE FROM collection_pets WHERE collection_id LIKE 'auto-%';\n";
+sql += "DELETE FROM collection_pets WHERE collection_id LIKE 'auto-%' AND collection_id NOT LIKE 'auto-color-%';\n";
 for (const r of RULES) {
   sql += `INSERT INTO collections (id, title, slug, description, created_at) VALUES ('${r.id}','${esc(r.title)}','${esc(r.slug)}','${esc(r.desc)}',${TS}) ON CONFLICT(id) DO UPDATE SET title=excluded.title, slug=excluded.slug, description=excluded.description;\n`;
 }
