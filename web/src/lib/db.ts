@@ -36,8 +36,24 @@ export async function ensureSchema(db: any): Promise<void> {
     db.prepare("CREATE TABLE IF NOT EXISTS pet_requests (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, user_id INTEGER NOT NULL, login TEXT NOT NULL, avatar TEXT, status TEXT NOT NULL DEFAULT 'open', created_at INTEGER NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS request_votes (request_id TEXT NOT NULL, user_id INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (request_id, user_id))"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_pet_requests_status ON pet_requests (status)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS pet_numbers (slug TEXT PRIMARY KEY, num INTEGER NOT NULL)"),
   ]);
   ready = true;
+}
+
+// Stable dex numbers (slug -> NNNNN), assigned by the data seed. Map for bulk views.
+export async function getNumbers(db: any): Promise<Record<string, number>> {
+  if (!db) return {};
+  const r: any = await db.prepare("SELECT slug, num FROM pet_numbers").all();
+  const m: Record<string, number> = {};
+  for (const row of r?.results ?? []) m[row.slug] = row.num;
+  return m;
+}
+
+export async function getNumber(db: any, slug: string): Promise<number | null> {
+  if (!db) return null;
+  const r: any = await db.prepare("SELECT num FROM pet_numbers WHERE slug=?").bind(slug).first();
+  return r?.num ?? null;
 }
 
 // ---- pet requests (community wishlist) ----
