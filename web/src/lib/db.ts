@@ -27,6 +27,7 @@ export async function ensureSchema(db: any): Promise<void> {
     db.prepare("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, login TEXT, avatar TEXT, updated_at INTEGER NOT NULL DEFAULT 0)"),
     db.prepare("CREATE TABLE IF NOT EXISTS pet_overrides (slug TEXT PRIMARY KEY, kind TEXT, hidden INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0)"),
     db.prepare("CREATE TABLE IF NOT EXISTS pet_installs (slug TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS pet_downloads (slug TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0)"),
     db.prepare("CREATE TABLE IF NOT EXISTS submissions (id TEXT PRIMARY KEY, slug TEXT NOT NULL, name TEXT NOT NULL, kind TEXT NOT NULL, description TEXT, sheet_ext TEXT NOT NULL, user_id INTEGER NOT NULL, login TEXT NOT NULL, avatar TEXT, status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL, reviewed_at INTEGER)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions (status)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_submissions_user ON submissions (user_id)"),
@@ -49,6 +50,12 @@ export async function getColors(db: any): Promise<Record<string, string>> {
   const m: Record<string, string> = {};
   for (const row of r?.results ?? []) m[row.slug] = row.color;
   return m;
+}
+
+export async function getColor(db: any, slug: string): Promise<string> {
+  if (!db) return "";
+  const r: any = await db.prepare("SELECT color FROM pet_meta WHERE slug=?").bind(slug).first();
+  return r?.color ?? "";
 }
 
 // Stable dex numbers (slug -> NNNNN), assigned by the data seed. Map for bulk views.
@@ -215,6 +222,17 @@ export async function incrementInstall(db: any, slug: string): Promise<number> {
     .bind(slug, Date.now())
     .run();
   const r: any = await db.prepare("SELECT count FROM pet_installs WHERE slug=?").bind(slug).first();
+  return r?.count ?? 0;
+}
+
+// Bump a pet's web download counter (sprite / pet.json downloaded from the site).
+export async function incrementDownload(db: any, slug: string): Promise<number> {
+  if (!db) return 0;
+  await db
+    .prepare("INSERT INTO pet_downloads (slug, count, updated_at) VALUES (?, 1, ?) ON CONFLICT(slug) DO UPDATE SET count=count+1, updated_at=excluded.updated_at")
+    .bind(slug, Date.now())
+    .run();
+  const r: any = await db.prepare("SELECT count FROM pet_downloads WHERE slug=?").bind(slug).first();
   return r?.count ?? 0;
 }
 
