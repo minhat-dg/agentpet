@@ -52,9 +52,11 @@ struct FloatingPetView: View {
             if pet.showChat && pet.selectedPetID != nil {
                 if bubbleSettings.multiAgentBubbleEnabled && !pet.activeAgentSessions.isEmpty {
                     AgentBubble(sessions: pet.activeAgentSessions)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
                         .transition(AnyTransition.scale(scale: 0.6).combined(with: .opacity))
                 } else if !pet.chatLine.isEmpty {
                     ChatBubble(text: pet.chatLine)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
                         .transition(AnyTransition.scale(scale: 0.6).combined(with: .opacity))
                 }
             }
@@ -185,6 +187,7 @@ struct AgentBubble: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(stroke, lineWidth: 1)
                 }
             }
+            .compositingGroup()
             .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
             if tailEdge == .bottom {
                 Triangle()
@@ -859,6 +862,10 @@ private struct ChatBubble: View {
                 .padding(.vertical, 7)
                 .background(Capsule().fill(fill))
                 .overlay(Capsule().strokeBorder(borderColor, lineWidth: 1))
+                // Flatten to one layer so the shadow traces the capsule's
+                // rounded silhouette instead of its rectangular bounding box
+                // (SwiftUI draws boxy shadows on composed views otherwise).
+                .compositingGroup()
                 .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
             Triangle()
                 .fill(fill)
