@@ -22,7 +22,7 @@ const FILTERS = ["all", ...KIND_OPTIONS, "hidden"];
   ) : (
     <section class="px-4 pt-8 pb-16">
       <div class="mx-auto max-w-6xl">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <span class="grid h-9 w-9 place-items-center rounded-xl bg-brand-50 text-brand-600"><Icon name="wand" class="h-5 w-5" /></span>
           <h1 class="font-display text-2xl font-bold text-ink">Pet admin</h1>
           <a href="/admin/collections" class="ml-auto btn-ghost !px-4 !py-2 text-sm"><Icon name="grid" class="h-4 w-4" /> Collections</a>
@@ -30,7 +30,7 @@ const FILTERS = ["all", ...KIND_OPTIONS, "hidden"];
           <a href="/requests" class="btn-ghost !px-4 !py-2 text-sm"><Icon name="sparkles" class="h-4 w-4" /> Requests</a>
           <span class="text-sm text-muted"><b class="text-ink">{user.login}</b></span>
         </div>
-        <p class="mt-2 text-muted">Edit a pet's category, or hide it from the public gallery. Changes go live within a minute.</p>
+        <p class="mt-2 text-muted">Click a pet to edit its name, description, category, collections, or hide it. Changes go live within a minute.</p>
 
         <div class="card mt-6 flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
           <label class="relative flex flex-1 items-center">
@@ -51,49 +51,78 @@ const FILTERS = ["all", ...KIND_OPTIONS, "hidden"];
       </div>
     </section>
 
+    <!-- edit modal -->
+    <div id="editModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-ink/40 backdrop-blur-sm" data-modal-close></div>
+      <div class="absolute inset-x-0 top-[5vh] mx-auto max-h-[90vh] w-[min(640px,92vw)] overflow-y-auto rounded-3xl border border-line bg-white p-6 shadow-card">
+        <div class="flex items-center gap-3">
+          <span class="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-line sprite-checker"><canvas id="mThumb" class="h-12 w-12" width="96" height="96"></canvas></span>
+          <div class="min-w-0 flex-1">
+            <div id="mTitle" class="truncate font-display text-lg font-bold text-ink"></div>
+            <div id="mSlug" class="truncate text-xs text-faint"></div>
+          </div>
+          <button id="mPrev" class="chip !px-3 !py-1.5 text-xs">← Prev</button>
+          <button id="mNext" class="chip !px-3 !py-1.5 text-xs">Next →</button>
+          <button data-modal-close aria-label="Close" class="grid h-9 w-9 place-items-center rounded-full text-faint transition hover:bg-brand-50 hover:text-brand-700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+
+        <div class="mt-5 space-y-4">
+          <div>
+            <label class="text-xs font-semibold text-faint">Name</label>
+            <input id="mName" maxlength="80" class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand-300" />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-faint">Description</label>
+            <textarea id="mDesc" rows="3" maxlength="400" placeholder="Override description (optional)" class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand-300"></textarea>
+          </div>
+          <div class="flex flex-wrap items-end gap-4">
+            <div>
+              <label class="text-xs font-semibold text-faint">Category</label>
+              <select id="mKind" class="mt-1 block rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand-300">
+                {KINDS.map((k) => <option value={k}>{k}</option>)}
+              </select>
+            </div>
+            <label class="ml-auto inline-flex items-center gap-2 text-sm font-semibold text-ink"><input type="checkbox" id="mHidden" class="h-4 w-4 rounded border-line" /> Hidden from gallery</label>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-faint">Collections</label>
+            <div id="mCols" class="mt-1.5 flex flex-wrap gap-2"></div>
+            <div class="relative mt-2">
+              <input id="mColInput" type="text" autocomplete="off" placeholder="Add to a collection…" class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand-300" />
+              <div id="mColMenu" class="absolute z-10 mt-1 hidden max-h-52 w-full overflow-y-auto rounded-xl border border-line bg-white p-1.5 shadow-card"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 border-t border-line pt-4">
+            <button id="mSave" class="btn-primary !px-5 !py-2.5 text-sm"><Icon name="check" class="h-4 w-4" /> Save changes</button>
+            <span id="mMsg" class="text-sm"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script define:vars={{ KINDS }}>
-      // First-frame thumbnail (alpha-gutter slice), lazy per visible row.
       function seg(a){const r=[];let s=null;for(let i=0;i<a.length;i++){if(a[i]&&s===null)s=i;else if(!a[i]&&s!==null){r.push([s,i]);s=null;}}if(s!==null)r.push([s,a.length]);return r;}
       function firstFrame(img){const w=img.naturalWidth,h=img.naturalHeight,TH=16;const off=document.createElement("canvas");off.width=w;off.height=h;const o=off.getContext("2d");o.drawImage(img,0,0);let px;try{px=o.getImageData(0,0,w,h).data;}catch{return null;}const rh=new Array(h).fill(false);for(let y=0;y<h;y++){const b=y*w*4;for(let x=0;x<w;x++)if(px[b+x*4+3]>TH){rh[y]=true;break;}}const rows=seg(rh);if(!rows.length)return null;const[y0,y1]=rows[0];const ch=new Array(w).fill(false);for(let x=0;x<w;x++)for(let y=y0;y<y1;y++)if(px[(y*w+x)*4+3]>TH){ch[x]=true;break;}const cols=seg(ch);if(!cols.length)return null;const[x0,x1]=cols[0];return{x:x0,y:y0,w:x1-x0,h:y1-y0};}
       function drawThumb(cv,slug){const ctx=cv.getContext("2d");ctx.imageSmoothingEnabled=false;const img=new Image();img.onload=()=>{const f=firstFrame(img);if(!f)return;const s=Math.min(cv.width/f.w,cv.height/f.h)*0.9,dw=f.w*s,dh=f.h*s;ctx.clearRect(0,0,cv.width,cv.height);ctx.drawImage(img,f.x,f.y,f.w,f.h,(cv.width-dw)/2,(cv.height-dh)/2,dw,dh);cv.parentElement.classList.remove("ap-skel");};img.src="/api/sprite/"+slug;}
       const io=new IntersectionObserver((es)=>{for(const e of es)if(e.isIntersecting){const cv=e.target;io.unobserve(cv);drawThumb(cv,cv.dataset.slug);}},{rootMargin:"200px"});
 
       const esc=(s)=>String(s).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-      const rowsBox=document.getElementById("rows");
-      const moreBtn=document.getElementById("more");
-      const countEl=document.getElementById("count");
-      const emptyEl=document.getElementById("empty");
-      const qEl=document.getElementById("q");
-      let all=[],filtered=[],shown=0;const BATCH=50;
-      let q="",filter="all";
+      const rowsBox=document.getElementById("rows"),moreBtn=document.getElementById("more"),countEl=document.getElementById("count"),emptyEl=document.getElementById("empty"),qEl=document.getElementById("q");
+      let all=[],filtered=[],shown=0;const BATCH=50;let q="",filter="all";
+      let collections=[]; // {id,title,slug,count}
 
-      const kindSelect=(slug,kind)=>`<select data-kind-for="${slug}" class="rounded-lg border border-line bg-white px-2 py-1.5 text-sm text-ink outline-none focus:border-brand-300">${KINDS.map((k)=>`<option value="${k}"${k===kind?" selected":""}>${k}</option>`).join("")}</select>`;
       function row(p){
-        return `<div data-rowwrap="${p.slug}" class="rounded-2xl border border-line bg-white ${p.hidden?"opacity-60":""}">
-          <div class="flex items-center gap-3 px-3 py-2">
-            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-line sprite-checker ap-skel"><canvas class="h-10 w-10" width="80" height="80" data-slug="${p.slug}"></canvas></span>
-            <div class="min-w-0 flex-1">
-              <div class="truncate font-display font-semibold text-ink" data-name-disp>${esc(p.name)}</div>
-              <div class="flex items-center gap-2 text-xs text-faint">
-                <span class="rounded-full bg-brand-50 px-2 py-0.5 font-pixel text-[10px] uppercase tracking-wide text-brand-700">${esc(p.source)}</span>
-                <span class="truncate">${esc(p.slug)}</span>
-                ${p.hidden?'<span class="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">hidden</span>':""}
-              </div>
-            </div>
-            ${kindSelect(p.slug,p.kind)}
-            <button data-edit-for="${p.slug}" class="chip !px-3 !py-1.5 text-xs">Edit</button>
-            <button data-hide-for="${p.slug}" class="chip !px-3 !py-1.5 text-xs ${p.hidden?"":"!border-rose-200 !text-rose-600"}">${p.hidden?"Restore":"Delete"}</button>
-          </div>
-          <div data-editor="${p.slug}" class="hidden border-t border-line px-3 py-3">
-            <label class="text-xs font-semibold text-faint">Name</label>
-            <input data-edit-name value="${esc(p.nameOverride||p.name)}" maxlength="80" class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand-300" />
-            <label class="mt-3 block text-xs font-semibold text-faint">Description</label>
-            <textarea data-edit-desc rows="2" maxlength="400" placeholder="Override description (optional)" class="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand-300">${esc(p.description||"")}</textarea>
-            <div class="mt-2 flex items-center gap-3">
-              <button data-save-for="${p.slug}" class="btn-primary !px-4 !py-2 text-sm">Save</button>
-              <span data-edit-msg class="text-xs"></span>
+        return `<div data-rowwrap="${p.slug}" class="flex items-center gap-3 rounded-2xl border border-line bg-white px-3 py-2 ${p.hidden?"opacity-60":""}">
+          <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-line sprite-checker ap-skel"><canvas class="h-10 w-10" width="80" height="80" data-slug="${p.slug}"></canvas></span>
+          <div class="min-w-0 flex-1">
+            <div class="truncate font-display font-semibold text-ink" data-name-disp>${esc(p.name)}</div>
+            <div class="flex items-center gap-2 text-xs text-faint">
+              <span class="rounded-full bg-brand-50 px-2 py-0.5 font-pixel text-[10px] uppercase tracking-wide text-brand-700">${esc(p.kind)}</span>
+              <span class="truncate">${esc(p.slug)}</span>
+              ${p.hidden?'<span class="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">hidden</span>':""}
             </div>
           </div>
+          <button data-edit-for="${p.slug}" class="btn-ghost !px-4 !py-1.5 text-sm">Edit</button>
         </div>`;
       }
       function renderMore(){
@@ -118,45 +147,73 @@ const FILTERS = ["all", ...KIND_OPTIONS, "hidden"];
       let t;qEl.addEventListener("input",()=>{clearTimeout(t);t=setTimeout(()=>{q=qEl.value.trim().toLowerCase();apply();},180);});
       document.getElementById("chips").addEventListener("click",(e)=>{const b=e.target.closest("button");if(!b)return;filter=b.dataset.filter;document.querySelectorAll("#chips button").forEach((x)=>x.classList.remove("chip-active"));b.classList.add("chip-active");apply();});
 
-      async function post(slug,patch){
-        const res=await fetch("/api/admin/pet",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({slug,...patch})});
-        return res.ok?res.json():null;
+      async function postPet(slug,patch){const res=await fetch("/api/admin/pet",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({slug,...patch})});return res.ok?res.json():null;}
+      async function postCol(action,id,slug){const res=await fetch("/api/admin/collection",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,id,slug})});return res.ok?res.json():null;}
+
+      // ---- modal editor ----
+      const modal=document.getElementById("editModal");
+      const mThumb=document.getElementById("mThumb"),mTitle=document.getElementById("mTitle"),mSlug=document.getElementById("mSlug");
+      const mName=document.getElementById("mName"),mDesc=document.getElementById("mDesc"),mKind=document.getElementById("mKind"),mHidden=document.getElementById("mHidden");
+      const mCols=document.getElementById("mCols"),mColInput=document.getElementById("mColInput"),mColMenu=document.getElementById("mColMenu");
+      const mMsg=document.getElementById("mMsg"),mPrev=document.getElementById("mPrev"),mNext=document.getElementById("mNext"),mSave=document.getElementById("mSave");
+      let editIdx=-1, petColIds=new Set();
+
+      function renderCols(slug){
+        const inside=collections.filter((c)=>petColIds.has(c.id));
+        mCols.innerHTML=inside.length?inside.map((c)=>`<span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">${esc(c.title)}<button data-rmcol="${c.id}" class="grid h-4 w-4 place-items-center rounded-full bg-white/70 text-rose-600 hover:bg-white">×</button></span>`).join(""):`<span class="text-xs text-faint">Not in any collection.</span>`;
       }
-      // kind change
-      rowsBox.addEventListener("change",async(e)=>{
-        const sel=e.target.closest("[data-kind-for]");if(!sel)return;
-        const slug=sel.dataset.kindFor;sel.disabled=true;
-        const r=await post(slug,{kind:sel.value});
-        sel.disabled=false;
-        if(r){const p=all.find((x)=>x.slug===slug);if(p)p.kind=sel.value;}
-      });
-      // delete / restore
-      rowsBox.addEventListener("click",async(e)=>{
-        const btn=e.target.closest("[data-hide-for]");if(!btn)return;
-        const slug=btn.dataset.hideFor;const p=all.find((x)=>x.slug===slug);if(!p)return;
-        btn.disabled=true;
-        const r=await post(slug,{hidden:!p.hidden});
-        btn.disabled=false;
-        if(r){p.hidden=!!r.hidden;apply();}
-      });
-      // edit toggle + save (name + description override)
-      rowsBox.addEventListener("click",async(e)=>{
-        const ed=e.target.closest("[data-edit-for]");
-        if(ed){rowsBox.querySelector(`[data-editor="${CSS.escape(ed.dataset.editFor)}"]`)?.classList.toggle("hidden");return;}
-        const sv=e.target.closest("[data-save-for]");
-        if(!sv)return;
-        const slug=sv.dataset.saveFor;const panel=rowsBox.querySelector(`[data-editor="${CSS.escape(slug)}"]`);if(!panel)return;
-        const name=panel.querySelector("[data-edit-name]").value.trim();
-        const description=panel.querySelector("[data-edit-desc]").value.trim();
-        const msg=panel.querySelector("[data-edit-msg]");sv.disabled=true;
-        const r=await post(slug,{name,description});
-        sv.disabled=false;
-        if(r){const p=all.find((x)=>x.slug===slug);if(p){p.nameOverride=name;p.description=description;p.name=name||p.name;}const disp=panel.closest("[data-rowwrap]")?.querySelector("[data-name-disp]");if(disp&&name)disp.textContent=name;msg.textContent="Saved";msg.className="text-xs text-emerald-600";}
-        else{msg.textContent="Failed";msg.className="text-xs text-rose-600";}
+      function renderColMenu(qv){
+        const ql=qv.trim().toLowerCase();
+        const list=collections.filter((c)=>!petColIds.has(c.id)&&(!ql||c.title.toLowerCase().includes(ql))).slice(0,30);
+        mColMenu.innerHTML=list.length?list.map((c)=>`<button data-addcol="${c.id}" class="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-50"><span class="truncate font-semibold text-ink">${esc(c.title)}</span><span class="shrink-0 text-xs text-faint">${c.count}</span></button>`).join(""):`<div class="px-3 py-2 text-sm text-faint">No collections.</div>`;
+      }
+      async function openEditor(idx){
+        if(idx<0||idx>=filtered.length)return;
+        while(idx>=shown&&shown<filtered.length)renderMore();
+        editIdx=idx;const p=filtered[idx];
+        mTitle.textContent=p.name;mSlug.textContent=p.slug;
+        mName.value=p.nameOverride||p.name;mDesc.value=p.description||"";mKind.value=p.kind;mHidden.checked=!!p.hidden;
+        mMsg.textContent="";mColInput.value="";mColMenu.classList.add("hidden");
+        mPrev.disabled=idx<=0;mNext.disabled=idx>=filtered.length-1;
+        mPrev.classList.toggle("opacity-40",mPrev.disabled);mNext.classList.toggle("opacity-40",mNext.disabled);
+        drawThumb(mThumb,p.slug);
+        modal.classList.remove("hidden");
+        petColIds=new Set();mCols.innerHTML='<span class="text-xs text-faint">Loading…</span>';
+        const d=await fetch("/api/admin/pet-collections.json?slug="+encodeURIComponent(p.slug)).then((r)=>r.json()).catch(()=>({ids:[]}));
+        petColIds=new Set(d.ids||[]);renderCols(p.slug);
+      }
+      function closeModal(){modal.classList.add("hidden");}
+
+      rowsBox.addEventListener("click",(e)=>{const b=e.target.closest("[data-edit-for]");if(!b)return;const idx=filtered.findIndex((x)=>x.slug===b.dataset.editFor);openEditor(idx);});
+      mPrev.addEventListener("click",()=>openEditor(editIdx-1));
+      mNext.addEventListener("click",()=>openEditor(editIdx+1));
+      modal.querySelectorAll("[data-modal-close]").forEach((el)=>el.addEventListener("click",closeModal));
+      document.addEventListener("keydown",(e)=>{if(modal.classList.contains("hidden"))return;if(e.key==="Escape")closeModal();});
+
+      mColInput.addEventListener("focus",()=>{renderColMenu(mColInput.value);mColMenu.classList.remove("hidden");});
+      mColInput.addEventListener("input",()=>{renderColMenu(mColInput.value);mColMenu.classList.remove("hidden");});
+      document.addEventListener("click",(e)=>{if(!mColInput.parentElement.contains(e.target))mColMenu.classList.add("hidden");});
+      mColMenu.addEventListener("click",async(e)=>{const b=e.target.closest("[data-addcol]");if(!b)return;const id=b.dataset.addcol;const p=filtered[editIdx];const r=await postCol("add",id,p.slug);if(r){petColIds.add(id);renderCols(p.slug);renderColMenu(mColInput.value);const c=collections.find((x)=>x.id===id);if(c)c.count++;}});
+      mCols.addEventListener("click",async(e)=>{const b=e.target.closest("[data-rmcol]");if(!b)return;const id=b.dataset.rmcol;const p=filtered[editIdx];const r=await postCol("remove",id,p.slug);if(r){petColIds.delete(id);renderCols(p.slug);const c=collections.find((x)=>x.id===id);if(c&&c.count>0)c.count--;}});
+
+      mSave.addEventListener("click",async()=>{
+        const p=filtered[editIdx];if(!p)return;
+        const name=mName.value.trim(),description=mDesc.value.trim(),kind=mKind.value,hidden=mHidden.checked;
+        mSave.disabled=true;mMsg.textContent="Saving…";mMsg.className="text-sm text-faint";
+        const r=await postPet(p.slug,{name,description,kind,hidden});
+        mSave.disabled=false;
+        if(r){p.nameOverride=name;p.description=description;p.name=name||p.name;p.kind=kind;p.hidden=hidden;
+          mTitle.textContent=p.name;mMsg.textContent="Saved";mMsg.className="text-sm text-emerald-600";
+          const wrap=rowsBox.querySelector(`[data-rowwrap="${CSS.escape(p.slug)}"]`);if(wrap){const dn=wrap.querySelector("[data-name-disp]");if(dn)dn.textContent=p.name;wrap.classList.toggle("opacity-60",hidden);}
+        }else{mMsg.textContent="Failed";mMsg.className="text-sm text-rose-600";}
       });
 
-      fetch("/api/admin/pets.json").then((r)=>r.json()).then((d)=>{
+      Promise.all([
+        fetch("/api/admin/pets.json").then((r)=>r.json()).catch(()=>({pets:[]})),
+        fetch("/api/collections.json").then((r)=>r.json()).catch(()=>({collections:[]})),
+      ]).then(([d,cj])=>{
         all=(d.pets||[]).sort((a,b)=>a.name.localeCompare(b.name));
+        collections=(cj.collections||[]).map((c)=>({id:c.id,title:c.title,slug:c.slug,count:c.count}));
         apply();
       }).catch(()=>{countEl.textContent="Failed to load.";});
     </script>
