@@ -33,6 +33,19 @@ const tags = Array.from(new Set([TRAITS[f % TRAITS.length], TRAITS[(f >>> 5) % T
 const no = 100 + (f % 900);
 const featured = f % 4 === 0;
 const GITHUB = "https://github.com/ntd4996/agentpet";
+
+// Dex stats radar geometry (fixed; the data polygon is drawn client-side).
+const RADAR = { cx: 120, cy: 120, r: 90 };
+const AXES = [
+  { key: "loved", label: "Loved", ang: -90, color: "#f43f5e" },
+  { key: "popular", label: "Popular", ang: 0, color: "#2563eb" },
+  { key: "animated", label: "Animated", ang: 90, color: "#10b981" },
+  { key: "states", label: "States", ang: 180, color: "#f59e0b" },
+];
+const rpt = (ang: number, rad: number): [number, number] => { const a = (ang * Math.PI) / 180; return [RADAR.cx + Math.cos(a) * rad, RADAR.cy + Math.sin(a) * rad]; };
+const rings = [0.25, 0.5, 0.75, 1].map((f) => AXES.map((a) => rpt(a.ang, RADAR.r * f).map((n) => n.toFixed(1)).join(",")).join(" "));
+const spokes = AXES.map((a) => rpt(a.ang, RADAR.r));
+const axisLabels = AXES.map((a) => ({ ...a, p: rpt(a.ang, RADAR.r + 17) }));
 ---
 <Base title={`${pet.displayName} · AgentPet`} description={pet.description} active="gallery">
   <section class="px-4 pt-8 pb-4">
@@ -105,29 +118,33 @@ const GITHUB = "https://github.com/ntd4996/agentpet";
         </div>
       </div>
 
-      <!-- dex stats: derived from real signals (likes, installs, frames, states) -->
+      <!-- dex stats: a radar chart from real signals (likes, installs, frames, states) -->
       <div class="card mt-6 p-6" id="dexStats" data-slug={slug}>
-        <div class="mb-4 flex items-center gap-2">
+        <div class="mb-2 flex items-center gap-2">
           <span class="grid h-8 w-8 place-items-center rounded-xl bg-brand-50 text-brand-600"><Icon name="bolt" class="h-4 w-4" /></span>
           <h2 class="font-display text-xl font-bold text-ink">Dex stats</h2>
         </div>
-        <div class="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-          {[
-            { key: "loved", label: "Loved", color: "bg-accent-500" },
-            { key: "popular", label: "Popular", color: "bg-brand-500" },
-            { key: "animated", label: "Animated", color: "bg-emerald-500" },
-            { key: "states", label: "States", color: "bg-amber-500" },
-          ].map((s) => (
-            <div>
-              <div class="flex items-baseline justify-between text-xs">
-                <span class="font-pixel uppercase tracking-wide text-faint">{s.label}</span>
-                <span data-stat-val={s.key} class="font-display font-semibold text-ink">0</span>
+        <div class="grid items-center gap-6 sm:grid-cols-[1fr_1fr]">
+          <svg viewBox="-26 -22 292 284" class="mx-auto w-full max-w-[280px]">
+            <g fill="none" stroke="var(--color-line)" stroke-width="1">
+              {rings.map((pts) => <polygon points={pts} />)}
+              {spokes.map(([x, y]) => <line x1={RADAR.cx} y1={RADAR.cy} x2={x.toFixed(1)} y2={y.toFixed(1)} />)}
+            </g>
+            <polygon id="dexPoly" points={`${RADAR.cx},${RADAR.cy}`} fill="rgba(37,99,235,.16)" stroke="#2563eb" stroke-width="2" stroke-linejoin="round" class="transition-all duration-700" />
+            <g id="dexDots"></g>
+            {axisLabels.map((a) => (
+              <text x={a.p[0].toFixed(1)} y={a.p[1].toFixed(1)} text-anchor="middle" dominant-baseline="middle" class="fill-faint font-pixel" style="font-size:9px;letter-spacing:.04em">{a.label.toUpperCase()}</text>
+            ))}
+          </svg>
+          <div class="grid gap-2.5">
+            {AXES.map((a) => (
+              <div class="flex items-center gap-2.5">
+                <span class="h-3 w-3 shrink-0 rounded-full" style={`background:${a.color}`}></span>
+                <span class="flex-1 text-sm text-muted">{a.label}</span>
+                <span data-stat-val={a.key} class="font-display text-lg font-bold text-ink">0</span>
               </div>
-              <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-brand-50">
-                <div data-stat-bar={s.key} class={`h-full rounded-full ${s.color} transition-all duration-700`} style="width:0%"></div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -215,21 +232,35 @@ const GITHUB = "https://github.com/ntd4996/agentpet";
       ctx.drawImage(img, f.x, f.y, f.w, f.h, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
     }
 
-    // Dex stat bars (real signals). `sat` is a saturating curve for unbounded counts.
-    function setBar(key: string, pct: number, label: string | number) {
-      const bar = document.querySelector(`[data-stat-bar="${key}"]`) as HTMLElement | null;
-      const val = document.querySelector(`[data-stat-val="${key}"]`) as HTMLElement | null;
-      if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + "%";
-      if (val) val.textContent = String(label);
+    // Dex stats radar. Values are 0-100; `sat` is a saturating curve for unbounded
+    // counts (likes/installs). Geometry mirrors the SVG grid (cx120 cy120 r90).
+    const DEX_AX = [
+      { key: "loved", ang: -90, color: "#f43f5e" },
+      { key: "popular", ang: 0, color: "#2563eb" },
+      { key: "animated", ang: 90, color: "#10b981" },
+      { key: "states", ang: 180, color: "#f59e0b" },
+    ];
+    const DEX = { cx: 120, cy: 120, r: 90 };
+    const dexVals: Record<string, number> = { loved: 0, popular: 0, animated: 0, states: 0 };
+    const dexLabel: Record<string, string | number> = { loved: 0, popular: 0, animated: 0, states: 0 };
+    const dpt = (ang: number, rad: number): [number, number] => { const a = (ang * Math.PI) / 180; return [DEX.cx + Math.cos(a) * rad, DEX.cy + Math.sin(a) * rad]; };
+    function renderRadar() {
+      const poly = document.getElementById("dexPoly"); if (!poly) return;
+      const dots = document.getElementById("dexDots");
+      const pts = DEX_AX.map((a) => dpt(a.ang, DEX.r * Math.max(0, Math.min(100, dexVals[a.key])) / 100));
+      poly.setAttribute("points", pts.map((p) => p.map((n) => n.toFixed(1)).join(",")).join(" "));
+      if (dots) dots.innerHTML = pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="${DEX_AX[i].color}" />`).join("");
+      for (const a of DEX_AX) { const el = document.querySelector(`[data-stat-val="${a.key}"]`); if (el) el.textContent = String(dexLabel[a.key]); }
     }
+    function setStat(key: string, pct: number, label: string | number) { dexVals[key] = pct; dexLabel[key] = label; renderRadar(); }
     const sat = (n: number) => Math.round(100 * (1 - 1 / (1 + n / 6)));
     const dex = document.getElementById("dexStats");
     if (dex) {
       const dslug = dex.dataset.slug!;
       fetch("/api/stats.json").then((r) => r.json()).then((s: any) => {
         const likes = (s.likes || {})[dslug] || 0, installs = (s.installs || {})[dslug] || 0;
-        setBar("loved", sat(likes), likes);
-        setBar("popular", sat(installs), installs);
+        setStat("loved", sat(likes), likes);
+        setStat("popular", sat(installs), installs);
       }).catch(() => {});
     }
 
@@ -263,8 +294,8 @@ const GITHUB = "https://github.com/ntd4996/agentpet";
         rows = r;
         setText("stateCount", String(rows.length));
         const totalFrames = rows.reduce((a, f) => a + f.length, 0);
-        setBar("animated", Math.round((totalFrames / 72) * 100), totalFrames);
-        setBar("states", Math.round((rows.length / 9) * 100), rows.length);
+        setStat("animated", Math.round((totalFrames / 72) * 100), totalFrames);
+        setStat("states", Math.round((rows.length / 9) * 100), rows.length);
         grid.innerHTML = "";
         rows.forEach((frames, i) => {
           const name = NAMES[i] ?? `State ${i + 1}`;
