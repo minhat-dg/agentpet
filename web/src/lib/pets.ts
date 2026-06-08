@@ -34,18 +34,18 @@ export async function loadManifest(): Promise<ManifestPet[]> {
   }
 }
 
-export type OverrideMap = Record<string, { kind?: string; hidden?: boolean }>;
+export type OverrideMap = Record<string, { kind?: string; hidden?: boolean; name?: string; description?: string }>;
 export type EffectivePet = ManifestPet & { hidden: boolean };
 
-// Layer admin overrides over the manifest: effective kind + hidden flag. By default
-// hidden pets are dropped (public views); pass includeHidden for the admin view.
+// Layer admin overrides over the manifest: effective name + kind + hidden flag. By
+// default hidden pets are dropped (public views); pass includeHidden for the admin view.
 export function applyOverrides(pets: ManifestPet[], ovr: OverrideMap, includeHidden = false): EffectivePet[] {
   const out: EffectivePet[] = [];
   for (const p of pets) {
     const o = ovr[p.slug];
     const hidden = !!o?.hidden;
     if (hidden && !includeHidden) continue;
-    out.push({ ...p, kind: o?.kind || p.kind, hidden });
+    out.push({ ...p, name: o?.name || p.name, kind: o?.kind || p.kind, hidden });
   }
   return out;
 }

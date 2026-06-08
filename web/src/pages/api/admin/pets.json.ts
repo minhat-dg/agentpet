@@ -17,6 +17,7 @@ export const GET: APIRoute = async ({ cookies }) => {
   if (db) { await ensureSchema(db); ovr = await getOverrides(db); }
   const pets = applyOverrides(manifest, ovr, true).map((p) => ({
     slug: p.slug, name: p.name, kind: p.kind, source: p.source, submittedBy: p.submittedBy, hidden: p.hidden,
+    nameOverride: (ovr as any)[p.slug]?.name || "", description: (ovr as any)[p.slug]?.description || "",
   }));
   return new Response(JSON.stringify({ pets }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 };
