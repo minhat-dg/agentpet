@@ -11,7 +11,7 @@ const { slug = "" } = Astro.params;
 // pet.json carries displayName + description + category + submittedBy.
 let pet: any = null;
 try { pet = await (await fetch(`${petsBase()}/pets/${slug}/pet.json`)).json(); } catch {}
-if (!pet || !pet.displayName) return Astro.redirect("/gallery");
+if (!pet || !pet.displayName) return Astro.rewrite("/404");
 
 // Ordered, override-aware list for prev/next + real kind/author.
 const db = getDB();
