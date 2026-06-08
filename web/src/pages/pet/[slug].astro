@@ -2,7 +2,7 @@
 import Base from "../../layouts/Base.astro";
 import Icon from "../../components/Icon.astro";
 import { loadManifest, applyOverrides, petsBase } from "../../lib/pets";
-import { getDB, ensureSchema, getOverrides, collectionsForPet } from "../../lib/db";
+import { getDB, ensureSchema, getOverrides, collectionsForPet, getNumber } from "../../lib/db";
 
 export const prerender = false;
 
@@ -19,6 +19,8 @@ let ovr = {};
 if (db) { await ensureSchema(db); ovr = await getOverrides(db); }
 const all = applyOverrides(await loadManifest(), ovr);
 const inCollections = db ? await collectionsForPet(db, slug) : [];
+const petNum = db ? await getNumber(db, slug) : null;
+const noLabel = petNum ? String(petNum).padStart(5, "0") : "—";
 const idx = all.findIndex((p) => p.slug === slug);
 const entry = idx >= 0 ? all[idx] : null;
 const prev = all.length ? (idx > 0 ? all[idx - 1] : all[all.length - 1]) : null;
@@ -30,7 +32,6 @@ const TRAITS = ["focused", "mischievous", "sleepy", "cheerful", "brave", "shy", 
 const kind = entry?.kind || pet.category || "creature";
 const author = String(entry?.submittedBy || pet.submittedBy || "").trim() || "community";
 const tags = Array.from(new Set([TRAITS[f % TRAITS.length], TRAITS[(f >>> 5) % TRAITS.length]])).filter(Boolean);
-const no = 100 + (f % 900);
 const featured = f % 4 === 0;
 const GITHUB = "https://github.com/ntd4996/agentpet";
 
@@ -67,7 +68,7 @@ const axisLabels = AXES.map((a) => ({ ...a, p: rpt(a.ang, RADAR.r + 17) }));
       <div class="card mt-4 grid overflow-hidden md:grid-cols-[380px_1fr]">
         <div class="relative flex flex-col border-b border-line bg-white md:border-b-0 md:border-r">
           <div class="flex items-center justify-between px-6 pt-5 font-pixel text-[11px] tracking-wide text-faint">
-            <span>NO. {String(no).padStart(3, "0")}</span>
+            <span>NO. {noLabel}</span>
             {featured
               ? <span class="inline-flex items-center gap-1 text-brand-600"><Icon name="star" class="h-3 w-3" /> FEATURED</span>
               : <span class="uppercase">{kind}</span>}

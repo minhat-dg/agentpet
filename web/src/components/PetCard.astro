@@ -9,7 +9,7 @@ const { pet: p } = Astro.props as { pet: Pet };
 ---
 <a href={`/pet/${p.slug}`} class="card group flex flex-col overflow-hidden p-0 transition hover:-translate-y-1">
   <div class="flex items-center justify-between px-4 pt-3 font-pixel text-[11px] tracking-wide text-faint">
-    <span>NO. {String(p.no).padStart(3, "0")}</span>
+    <span>NO. {p.no ? String(p.no).padStart(5, "0") : "—"}</span>
     {p.featured
       ? <span class="inline-flex items-center gap-1 text-brand-600"><Icon name="star" class="h-3 w-3" /> FEATURED</span>
       : <span class="uppercase">{p.kind}</span>}

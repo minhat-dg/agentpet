@@ -4,7 +4,7 @@ import Icon from "../components/Icon.astro";
 import PetCard from "../components/PetCard.astro";
 import CodeBlock from "../components/CodeBlock.astro";
 import { loadManifest, applyOverrides, petsBase } from "../lib/pets";
-import { getDB, ensureSchema, getOverrides, approvedCommunityPets } from "../lib/db";
+import { getDB, ensureSchema, getOverrides, approvedCommunityPets, getNumbers } from "../lib/db";
 
 // Rendered per request (no-store) so the home reshuffles on every reload and
 // reflects admin edits live. Sprites go through our same-origin proxy
@@ -19,10 +19,11 @@ const manifest = await loadManifest();
 const db = getDB();
 let ovr = {};
 let community: any[] = [];
-if (db) { await ensureSchema(db); ovr = await getOverrides(db); community = await approvedCommunityPets(db); }
+let nums: Record<string, number> = {};
+if (db) { await ensureSchema(db); ovr = await getOverrides(db); community = await approvedCommunityPets(db); nums = await getNumbers(db); }
 const allPets = applyOverrides([...community, ...manifest], ovr);
 const petCount = allPets.length || 1100;
-const pets: { slug: string; name: string; kind: string }[] = allPets.map((p) => ({ slug: p.slug, name: p.name, kind: p.kind }));
+const pets: { slug: string; name: string; kind: string; num: number }[] = allPets.map((p) => ({ slug: p.slug, name: p.name, kind: p.kind, num: nums[p.slug] || 0 }));
 
 const bubbles = pets.slice(0, 10);
 
@@ -34,13 +35,13 @@ async function descOf(slug: string): Promise<string> {
   try { const r = await fetch(`${petsBase()}/pets/${slug}/pet.json`); const j: any = await r.json(); return (j.description ?? "").toString(); } catch { return ""; }
 }
 const TRAITS = ["focused", "mischievous", "sleepy", "cheerful", "brave", "shy", "curious", "chaotic", "loyal", "zen", "sassy", "dreamy"];
-async function enrich(p: { slug: string; name: string; kind: string }) {
+async function enrich(p: { slug: string; name: string; kind: string; num: number }) {
   const f = fnv(p.slug);
   const t1 = TRAITS[f % TRAITS.length];
   const t2 = TRAITS[(f >>> 5) % TRAITS.length];
   return {
     slug: p.slug, name: p.name, author: "community",
-    no: 100 + (f % 900),
+    no: p.num,
     kind: p.kind,
     tags: Array.from(new Set([t1, t2])).filter(Boolean),
     featured: f % 4 === 0,
@@ -58,12 +59,12 @@ function sample<T>(arr: T[], n: number): T[] {
 }
 // Lightweight enrich (no per-pet description fetch) for the category rows so the
 // home page can group the whole library without hundreds of build-time requests.
-function lite(p: { slug: string; name: string; kind: string }) {
+function lite(p: { slug: string; name: string; kind: string; num: number }) {
   const f = fnv(p.slug);
   const t1 = TRAITS[f % TRAITS.length];
   const t2 = TRAITS[(f >>> 5) % TRAITS.length];
   return {
-    slug: p.slug, name: p.name, no: 100 + (f % 900),
+    slug: p.slug, name: p.name, no: p.num,
     kind: p.kind,
     featured: f % 4 === 0,
     tags: Array.from(new Set([t1, t2])).filter(Boolean),
