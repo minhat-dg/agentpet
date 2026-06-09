@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Icon from "../components/Icon.astro";
 import SurprisePet from "../components/SurprisePet.astro";
+import { DICT } from "../i18n/dict";
 interface Props { title?: string; description?: string; active?: string; }
 const { title = "AgentPet", description = "Adopt, build, and share pixel companions for your AI coding agents.", active = "" } = Astro.props;
 const nav = [
@@ -86,6 +87,11 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         ))}
       </div>
       <div class="ml-auto flex shrink-0 items-center gap-1.5">
+        <div class="lang-switch hidden items-center rounded-full border border-line bg-white/70 p-0.5 sm:inline-flex" role="group" aria-label="Language">
+          <button type="button" data-lang-btn="en" class="lang-btn">EN</button>
+          <button type="button" data-lang-btn="vi" class="lang-btn">VI</button>
+          <button type="button" data-lang-btn="zh" class="lang-btn">中</button>
+        </div>
         <a href={DISCORD} target="_blank" rel="noopener" aria-label="Discord" class="hidden rounded-full p-2.5 text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-flex">
           <Icon name="discord" />
         </a>
@@ -110,6 +116,11 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         {nav.map((n) => (
           <a href={n.href} class={`block rounded-xl px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-700 ${active === n.key ? "bg-brand-50 text-brand-700" : "text-muted"}`} data-i18n={n.label}>{n.label}</a>
         ))}
+        <div class="lang-switch mt-2 flex items-center gap-1 border-t border-line/70 pt-2" role="group" aria-label="Language">
+          <button type="button" data-lang-btn="en" class="lang-btn flex-1">EN</button>
+          <button type="button" data-lang-btn="vi" class="lang-btn flex-1">Tiếng Việt</button>
+          <button type="button" data-lang-btn="zh" class="lang-btn flex-1">中文</button>
+        </div>
       </div>
     </div>
   </header>
@@ -180,41 +191,121 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
   </footer>
   </div>
 
-  <!-- Client-side chrome localization: auto-detect the browser language and
-       translate [data-i18n] elements into vi/zh (works on static + SSR pages). -->
-  <script is:inline>
+  <!-- Full-site client localization: a language switcher + persisted choice.
+       Auto-translates text nodes, [data-i18n] elements, and data-i18n-<attr>
+       attributes whose English text matches a key in DICT. Works on every page
+       (static + SSR). Remembers the choice in localStorage for next visit. -->
+  <script is:inline define:vars={{ DICT }}>
     (function () {
-      var DICT = {
-        vi: {
-          "Gallery": "Thư viện", "Collections": "Bộ sưu tập", "Leaderboard": "Bảng xếp hạng",
-          "Requests": "Yêu cầu", "Make": "Tạo", "Integrations": "Tích hợp", "Creators": "Người tạo",
-          "Contributors": "Người đóng góp", "Docs": "Tài liệu", "Sign in": "Đăng nhập",
-          "Get the app": "Tải ứng dụng", "Explore": "Khám phá", "Community": "Cộng đồng",
-          "Get started": "Bắt đầu", "Make a pet": "Tạo thú cưng", "Submit a pet": "Gửi thú cưng",
-          "Install guide": "Hướng dẫn cài", "Legal & takedown": "Pháp lý & gỡ bỏ",
-          "Download AgentPet and pick a companion.": "Tải AgentPet và chọn một người bạn."
-        },
-        zh: {
-          "Gallery": "图库", "Collections": "合集", "Leaderboard": "排行榜",
-          "Requests": "请求", "Make": "制作", "Integrations": "集成", "Creators": "创作者",
-          "Contributors": "贡献者", "Docs": "文档", "Sign in": "登录",
-          "Get the app": "获取应用", "Explore": "探索", "Community": "社区",
-          "Get started": "开始使用", "Make a pet": "制作宠物", "Submit a pet": "提交宠物",
-          "Install guide": "安装指南", "Legal & takedown": "法律与下架",
-          "Download AgentPet and pick a companion.": "下载 AgentPet，挑一只伙伴。"
+      var LANGS = ["en", "vi", "zh"];
+      var HTML_LANG = { en: "en", vi: "vi", zh: "zh-Hans" };
+      var STORE_KEY = "ap_lang";
+      var ATTRS = ["placeholder", "title", "aria-label", "alt", "content", "value"];
+      var SKIP = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, CODE: 1, PRE: 1, TEXTAREA: 1, INPUT: 1, SELECT: 1, OPTION: 1, SVG: 1, svg: 1 };
+
+      function detect() {
+        try { var s = localStorage.getItem(STORE_KEY); if (s && LANGS.indexOf(s) >= 0) return s; } catch (e) {}
+        var l = (navigator.language || "").toLowerCase();
+        if (l.indexOf("vi") === 0) return "vi";
+        if (l.indexOf("zh") === 0) return "zh";
+        return "en";
+      }
+      function tr(lang, en) {
+        if (lang === "en") return en;
+        var d = DICT[lang];
+        return (d && d[en] != null) ? d[en] : en;
+      }
+
+      // Build a set of all known English keys for the auto text-node pass.
+      var KNOWN = {};
+      for (var L in DICT) for (var k in DICT[L]) KNOWN[k] = 1;
+
+      var textNodes = [];  // { node, en, pre, post }
+      var elNodes = [];    // { el, en }
+      var attrNodes = [];  // { el, attr, en }
+      var collected = false;
+
+      function inSkip(node) {
+        for (var p = node.parentNode; p && p.nodeType === 1; p = p.parentNode) {
+          if (SKIP[p.tagName]) return true;
+          if (p.hasAttribute && p.hasAttribute("data-no-i18n")) return true;
         }
-      };
-      var l = (navigator.language || "").toLowerCase();
-      var lang = l.indexOf("vi") === 0 ? "vi" : (l.indexOf("zh") === 0 ? "zh" : null);
-      if (!lang) return;
-      document.documentElement.lang = lang === "zh" ? "zh-Hans" : "vi";
-      var d = DICT[lang];
-      document.querySelectorAll("[data-i18n]").forEach(function (el) {
-        var t = d[el.getAttribute("data-i18n")];
-        if (t) el.textContent = t;
+        return false;
+      }
+      function inExplicit(node) {
+        for (var p = node.parentNode; p && p.nodeType === 1; p = p.parentNode)
+          if (p.hasAttribute && p.hasAttribute("data-i18n")) return true;
+        return false;
+      }
+      function collect() {
+        if (collected) return; collected = true;
+        document.querySelectorAll("[data-i18n]").forEach(function (el) {
+          elNodes.push({ el: el, en: el.getAttribute("data-i18n") || el.textContent.trim() });
+        });
+        ATTRS.forEach(function (attr) {
+          document.querySelectorAll("[data-i18n-" + attr + "]").forEach(function (el) {
+            attrNodes.push({ el: el, attr: attr, en: el.getAttribute("data-i18n-" + attr) });
+          });
+        });
+        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+        var n;
+        while ((n = walker.nextNode())) {
+          var raw = n.nodeValue; if (!raw) continue;
+          var t = raw.trim(); if (!t || !KNOWN[t]) continue;
+          if (inSkip(n) || inExplicit(n)) continue;
+          textNodes.push({ node: n, en: t, pre: raw.match(/^\s*/)[0], post: raw.match(/\s*$/)[0] });
+        }
+      }
+      function updateSwitcher(lang) {
+        document.querySelectorAll("[data-lang-btn]").forEach(function (b) {
+          var on = b.getAttribute("data-lang-btn") === lang;
+          b.classList.toggle("lang-active", on);
+          b.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+      }
+      function apply(lang) {
+        collect();
+        elNodes.forEach(function (o) { o.el.textContent = tr(lang, o.en); });
+        attrNodes.forEach(function (o) { o.el.setAttribute(o.attr, tr(lang, o.en)); });
+        textNodes.forEach(function (o) { o.node.nodeValue = o.pre + tr(lang, o.en) + o.post; });
+        document.documentElement.lang = HTML_LANG[lang] || "en";
+        updateSwitcher(lang);
+      }
+      var current = detect();
+      function setLang(lang) {
+        if (LANGS.indexOf(lang) < 0) return;
+        current = lang;
+        try { localStorage.setItem(STORE_KEY, lang); } catch (e) {}
+        apply(lang);
+      }
+      document.addEventListener("click", function (e) {
+        var b = e.target.closest ? e.target.closest("[data-lang-btn]") : null;
+        if (!b) return;
+        e.preventDefault();
+        setLang(b.getAttribute("data-lang-btn"));
       });
+      // Expose so dynamically-injected UI (auth menu, etc.) can re-translate.
+      window.AP_I18N = { apply: function () { collected = false; textNodes = []; elNodes = []; attrNodes = []; apply(current); }, lang: function () { return current; }, set: setLang };
+      apply(current);
     })();
   </script>
+
+  <style is:global>
+    .lang-btn {
+      border-radius: 9999px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted, #6b7280);
+      line-height: 1;
+      transition: background-color .15s, color .15s;
+    }
+    .lang-btn:hover { color: var(--brand-700, #1d4ed8); }
+    .lang-btn.lang-active {
+      background: var(--brand-600, #2563eb);
+      color: #fff;
+    }
+  </style>
 
   <script>
     // Delegated copy-to-clipboard for any [data-copy] button (CodeBlock, etc.).
@@ -265,6 +356,8 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         const menu = document.getElementById("ap-menu");
         btn?.addEventListener("click", (e) => { e.stopPropagation(); menu?.classList.toggle("hidden"); });
         document.addEventListener("click", () => menu?.classList.add("hidden"));
+        // Re-translate the freshly injected auth menu into the current language.
+        (window as any).AP_I18N?.apply?.();
       }
 
       function setLiked(btn: Element, liked: boolean) {
