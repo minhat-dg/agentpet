@@ -135,7 +135,9 @@ struct SettingsDemoPanel: View {
                 }
                 petSprite
             }
-            .frame(maxWidth: .infinity, alignment: .bottom)
+            // Hug the content width so the bubble (which is leading-aligned in its
+            // own frame) stays centred over the pet instead of drifting left.
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 14)
             .padding(.bottom, 10)
         }
