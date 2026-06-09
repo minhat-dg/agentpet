@@ -25,8 +25,10 @@ final class ChatSettings: ObservableObject {
     static let editableMoods: [PetMood] = [.working, .waiting, .done, .celebrate, .idle]
 
     /// Built-in defaults per mood; idle borrows the IdleBoost one-liners.
+    /// Localized so the system message set follows the user's language.
     private func defaults(_ mood: PetMood) -> [String] {
-        mood == .idle ? IdleBoost.lines : (PetChat.lines[mood] ?? [])
+        let base = mood == .idle ? IdleBoost.lines : (PetChat.lines[mood] ?? [])
+        return base.map { NSLocalizedString($0, comment: "pet message") }
     }
 
     init() {

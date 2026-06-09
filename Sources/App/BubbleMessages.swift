@@ -42,13 +42,15 @@ final class BubbleMessages: ObservableObject {
     /// Built-in defaults shown (and editable) per state. Working is intentionally
     /// empty so the row falls back to live activity unless the user fills it in.
     static func defaultLines(_ mood: PetMood) -> [String] {
+        let base: [String]
         switch mood {
-        case .waiting:   return ["Waiting for your input", "Your turn — over to you", "Needs your input"]
-        case .done:      return PetChat.lines[.done] ?? []
-        case .celebrate: return PetChat.lines[.celebrate] ?? []
-        case .idle:      return IdleBoost.lines
-        case .working:   return []
+        case .waiting:   base = ["Waiting for your input", "Your turn — over to you", "Needs your input"]
+        case .done:      base = PetChat.lines[.done] ?? []
+        case .celebrate: base = PetChat.lines[.celebrate] ?? []
+        case .idle:      base = IdleBoost.lines
+        case .working:   base = []
         }
+        return base.map { NSLocalizedString($0, comment: "bubble message") }
     }
 
     private func nonEmpty(_ arr: [String]?) -> [String]? {

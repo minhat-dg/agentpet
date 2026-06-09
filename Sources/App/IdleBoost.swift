@@ -18,6 +18,6 @@ enum IdleBoost {
 
     static func line(at date: Date = Date()) -> String {
         let minute = max(0, Int(date.timeIntervalSince1970 / 60))
-        return lines[minute % lines.count]
+        return NSLocalizedString(lines[minute % lines.count], comment: "idle message")
     }
 }
