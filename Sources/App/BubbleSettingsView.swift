@@ -212,21 +212,6 @@ struct BubbleSettingsView: View {
         Group {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Sessions")
-                        .font(.subheadline)
-                    Picker("Sessions", selection: $settings.sessionGrouping) {
-                        ForEach(BubbleSessionGrouping.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    Text(settings.sessionGrouping.detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
                     Text("Rows")
                         .font(.subheadline)
                     Picker("Rows", selection: $settings.displayMode) {
@@ -237,6 +222,21 @@ struct BubbleSettingsView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     Text(settings.displayMode.detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sessions")
+                        .font(.subheadline)
+                    Picker("Sessions", selection: $settings.sessionGrouping) {
+                        ForEach(BubbleSessionGrouping.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Text(settings.sessionGrouping.detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
