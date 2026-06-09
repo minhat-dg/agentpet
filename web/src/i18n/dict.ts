@@ -180,6 +180,8 @@ export const DICT: Record<"vi" | "zh", Record<string, string>> = {
     "docs": "tài liệu",
     "leaderboard": "bảng xếp hạng",
     "requests": "yêu cầu",
+    "Install AgentPet": "Cài đặt AgentPet",
+    "Pet requests": "Yêu cầu pet",
   },
   zh: {
     "Gallery": "图库", "Collections": "合集", "Leaderboard": "排行榜",
@@ -352,5 +354,7 @@ export const DICT: Record<"vi" | "zh", Record<string, string>> = {
     "docs": "文档",
     "leaderboard": "排行榜",
     "requests": "请求",
+    "Install AgentPet": "安装 AgentPet",
+    "Pet requests": "宠物请求",
   },
 };
