@@ -82,7 +82,7 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
       <!-- inline nav: only when there's room (xl+) -->
       <div class="ml-1 hidden items-center gap-0.5 xl:flex">
         {nav.map((n) => (
-          <a href={n.href} class={`nav-link ${active === n.key ? "active" : ""}`}>{n.label}</a>
+          <a href={n.href} class={`nav-link ${active === n.key ? "active" : ""}`} data-i18n={n.label}>{n.label}</a>
         ))}
       </div>
       <div class="ml-auto flex shrink-0 items-center gap-1.5">
@@ -93,10 +93,10 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
           <Icon name="github" class="h-5 w-5" />
         </a>
         <div id="ap-auth" class="flex items-center">
-          <a href="/api/auth/login?returnTo=/" class="btn-ghost !px-3 !py-2"><Icon name="users" class="h-4 w-4" /> <span class="hidden sm:inline">Sign in</span></a>
+          <a href="/api/auth/login?returnTo=/" class="btn-ghost !px-3 !py-2"><Icon name="users" class="h-4 w-4" /> <span class="hidden sm:inline" data-i18n="Sign in">Sign in</span></a>
         </div>
         <a href="/install" class="btn-primary !px-4 !py-2">
-          <Icon name="download" class="h-4 w-4" /> <span class="hidden sm:inline">Get the app</span>
+          <Icon name="download" class="h-4 w-4" /> <span class="hidden sm:inline" data-i18n="Get the app">Get the app</span>
         </a>
         <!-- menu toggle: below xl -->
         <button id="navToggle" type="button" aria-label="Menu" aria-expanded="false" class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted transition hover:bg-brand-50 hover:text-brand-700 xl:hidden">
@@ -108,7 +108,7 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
     <div id="navMenu" class="mx-auto mt-2 hidden max-w-7xl px-1 xl:!hidden">
       <div class="rounded-2xl border border-line bg-white p-2 shadow-card">
         {nav.map((n) => (
-          <a href={n.href} class={`block rounded-xl px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-700 ${active === n.key ? "bg-brand-50 text-brand-700" : "text-muted"}`}>{n.label}</a>
+          <a href={n.href} class={`block rounded-xl px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-700 ${active === n.key ? "bg-brand-50 text-brand-700" : "text-muted"}`} data-i18n={n.label}>{n.label}</a>
         ))}
       </div>
     </div>
@@ -144,33 +144,33 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         </div>
       </div>
       <div>
-        <h4 class="font-display text-sm font-semibold text-ink">Explore</h4>
+        <h4 class="font-display text-sm font-semibold text-ink" data-i18n="Explore">Explore</h4>
         <ul class="mt-3 space-y-2 text-sm text-muted">
-          <li><a class="hover:text-brand-700" href="/gallery">Gallery</a></li>
-          <li><a class="hover:text-brand-700" href="/collections">Collections</a></li>
-          <li><a class="hover:text-brand-700" href="/leaderboard">Leaderboard</a></li>
-          <li><a class="hover:text-brand-700" href="/make">Make a pet</a></li>
-          <li><a class="hover:text-brand-700" href="/submit">Submit a pet</a></li>
-          <li><a class="hover:text-brand-700" href="/requests">Requests</a></li>
-          <li><a class="hover:text-brand-700" href="/integrations">Integrations</a></li>
-          <li><a class="hover:text-brand-700" href="/creators">Creators</a></li>
-          <li><a class="hover:text-brand-700" href="/contributors">Contributors</a></li>
-          <li><a class="hover:text-brand-700" href="/docs">Docs</a></li>
+          <li><a class="hover:text-brand-700" href="/gallery" data-i18n="Gallery">Gallery</a></li>
+          <li><a class="hover:text-brand-700" href="/collections" data-i18n="Collections">Collections</a></li>
+          <li><a class="hover:text-brand-700" href="/leaderboard" data-i18n="Leaderboard">Leaderboard</a></li>
+          <li><a class="hover:text-brand-700" href="/make" data-i18n="Make a pet">Make a pet</a></li>
+          <li><a class="hover:text-brand-700" href="/submit" data-i18n="Submit a pet">Submit a pet</a></li>
+          <li><a class="hover:text-brand-700" href="/requests" data-i18n="Requests">Requests</a></li>
+          <li><a class="hover:text-brand-700" href="/integrations" data-i18n="Integrations">Integrations</a></li>
+          <li><a class="hover:text-brand-700" href="/creators" data-i18n="Creators">Creators</a></li>
+          <li><a class="hover:text-brand-700" href="/contributors" data-i18n="Contributors">Contributors</a></li>
+          <li><a class="hover:text-brand-700" href="/docs" data-i18n="Docs">Docs</a></li>
         </ul>
       </div>
       <div>
-        <h4 class="font-display text-sm font-semibold text-ink">Community</h4>
+        <h4 class="font-display text-sm font-semibold text-ink" data-i18n="Community">Community</h4>
         <ul class="mt-3 space-y-2 text-sm text-muted">
           <li><a class="hover:text-brand-700" href={DISCORD} target="_blank" rel="noopener">Discord</a></li>
           <li><a class="hover:text-brand-700" href={GITHUB} target="_blank" rel="noopener">GitHub</a></li>
-          <li><a class="hover:text-brand-700" href="/install">Install guide</a></li>
-          <li><a class="hover:text-brand-700" href="/legal">Legal &amp; takedown</a></li>
+          <li><a class="hover:text-brand-700" href="/install" data-i18n="Install guide">Install guide</a></li>
+          <li><a class="hover:text-brand-700" href="/legal" data-i18n="Legal & takedown">Legal &amp; takedown</a></li>
         </ul>
       </div>
       <div>
-        <h4 class="font-display text-sm font-semibold text-ink">Get started</h4>
-        <p class="mt-3 text-sm text-muted">Download AgentPet and pick a companion.</p>
-        <a href="/install" class="btn-primary mt-4 !px-4 !py-2"><Icon name="download" class="h-4 w-4" /> Get the app</a>
+        <h4 class="font-display text-sm font-semibold text-ink" data-i18n="Get started">Get started</h4>
+        <p class="mt-3 text-sm text-muted" data-i18n="Download AgentPet and pick a companion.">Download AgentPet and pick a companion.</p>
+        <a href="/install" class="btn-primary mt-4 !px-4 !py-2"><Icon name="download" class="h-4 w-4" /> <span data-i18n="Get the app">Get the app</span></a>
       </div>
     </div>
     <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line/70 px-8 py-5">
@@ -179,6 +179,42 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
     </div>
   </footer>
   </div>
+
+  <!-- Client-side chrome localization: auto-detect the browser language and
+       translate [data-i18n] elements into vi/zh (works on static + SSR pages). -->
+  <script is:inline>
+    (function () {
+      var DICT = {
+        vi: {
+          "Gallery": "Thư viện", "Collections": "Bộ sưu tập", "Leaderboard": "Bảng xếp hạng",
+          "Requests": "Yêu cầu", "Make": "Tạo", "Integrations": "Tích hợp", "Creators": "Người tạo",
+          "Contributors": "Người đóng góp", "Docs": "Tài liệu", "Sign in": "Đăng nhập",
+          "Get the app": "Tải ứng dụng", "Explore": "Khám phá", "Community": "Cộng đồng",
+          "Get started": "Bắt đầu", "Make a pet": "Tạo thú cưng", "Submit a pet": "Gửi thú cưng",
+          "Install guide": "Hướng dẫn cài", "Legal & takedown": "Pháp lý & gỡ bỏ",
+          "Download AgentPet and pick a companion.": "Tải AgentPet và chọn một người bạn."
+        },
+        zh: {
+          "Gallery": "图库", "Collections": "合集", "Leaderboard": "排行榜",
+          "Requests": "请求", "Make": "制作", "Integrations": "集成", "Creators": "创作者",
+          "Contributors": "贡献者", "Docs": "文档", "Sign in": "登录",
+          "Get the app": "获取应用", "Explore": "探索", "Community": "社区",
+          "Get started": "开始使用", "Make a pet": "制作宠物", "Submit a pet": "提交宠物",
+          "Install guide": "安装指南", "Legal & takedown": "法律与下架",
+          "Download AgentPet and pick a companion.": "下载 AgentPet，挑一只伙伴。"
+        }
+      };
+      var l = (navigator.language || "").toLowerCase();
+      var lang = l.indexOf("vi") === 0 ? "vi" : (l.indexOf("zh") === 0 ? "zh" : null);
+      if (!lang) return;
+      document.documentElement.lang = lang === "zh" ? "zh-Hans" : "vi";
+      var d = DICT[lang];
+      document.querySelectorAll("[data-i18n]").forEach(function (el) {
+        var t = d[el.getAttribute("data-i18n")];
+        if (t) el.textContent = t;
+      });
+    })();
+  </script>
 
   <script>
     // Delegated copy-to-clipboard for any [data-copy] button (CodeBlock, etc.).
