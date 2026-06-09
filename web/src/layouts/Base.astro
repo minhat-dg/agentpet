@@ -87,10 +87,17 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         ))}
       </div>
       <div class="ml-auto flex shrink-0 items-center gap-1.5">
-        <div class="lang-switch hidden items-center rounded-full border border-line bg-white/70 p-0.5 sm:inline-flex" role="group" aria-label="Language">
-          <button type="button" data-lang-btn="en" class="lang-btn">EN</button>
-          <button type="button" data-lang-btn="vi" class="lang-btn">VI</button>
-          <button type="button" data-lang-btn="zh" class="lang-btn">中</button>
+        <div id="lang-switch" class="relative hidden sm:block">
+          <button id="lang-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Language" class="flex items-center gap-1 rounded-full border border-line bg-white/70 py-2 pl-2.5 pr-2 text-sm font-semibold text-muted transition hover:border-brand-300 hover:text-brand-700">
+            <Icon name="globe" class="h-4 w-4" />
+            <span data-lang-current class="min-w-[1.4rem] text-center">EN</span>
+            <Icon name="chevron" class="h-3.5 w-3.5 opacity-60" />
+          </button>
+          <div id="lang-menu" class="absolute right-0 z-50 mt-2 hidden w-40 rounded-2xl border border-line bg-white p-1.5 shadow-card">
+            <button type="button" data-lang-btn="en" class="lang-item"><span>English</span><Icon name="check" class="lang-check h-4 w-4 text-brand-600" /></button>
+            <button type="button" data-lang-btn="vi" class="lang-item"><span>Tiếng Việt</span><Icon name="check" class="lang-check h-4 w-4 text-brand-600" /></button>
+            <button type="button" data-lang-btn="zh" class="lang-item"><span>中文</span><Icon name="check" class="lang-check h-4 w-4 text-brand-600" /></button>
+          </div>
         </div>
         <a href={DISCORD} target="_blank" rel="noopener" aria-label="Discord" class="hidden rounded-full p-2.5 text-muted transition hover:bg-brand-50 hover:text-brand-700 sm:inline-flex">
           <Icon name="discord" />
@@ -116,10 +123,10 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         {nav.map((n) => (
           <a href={n.href} class={`block rounded-xl px-3 py-2 text-sm font-semibold transition hover:bg-brand-50 hover:text-brand-700 ${active === n.key ? "bg-brand-50 text-brand-700" : "text-muted"}`} data-i18n={n.label}>{n.label}</a>
         ))}
-        <div class="lang-switch mt-2 flex items-center gap-1 border-t border-line/70 pt-2" role="group" aria-label="Language">
-          <button type="button" data-lang-btn="en" class="lang-btn flex-1">EN</button>
-          <button type="button" data-lang-btn="vi" class="lang-btn flex-1">Tiếng Việt</button>
-          <button type="button" data-lang-btn="zh" class="lang-btn flex-1">中文</button>
+        <div class="mt-2 flex items-center gap-1 rounded-xl border border-line bg-brand-50/40 p-1" role="group" aria-label="Language">
+          <button type="button" data-lang-btn="en" class="lang-seg flex-1">EN</button>
+          <button type="button" data-lang-btn="vi" class="lang-seg flex-1">Tiếng Việt</button>
+          <button type="button" data-lang-btn="zh" class="lang-seg flex-1">中文</button>
         </div>
       </div>
     </div>
@@ -256,12 +263,20 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
           textNodes.push({ node: n, en: t, pre: raw.match(/^\s*/)[0], post: raw.match(/\s*$/)[0] });
         }
       }
+      var SHORT = { en: "EN", vi: "VI", zh: "中" };
       function updateSwitcher(lang) {
         document.querySelectorAll("[data-lang-btn]").forEach(function (b) {
           var on = b.getAttribute("data-lang-btn") === lang;
           b.classList.toggle("lang-active", on);
           b.setAttribute("aria-pressed", on ? "true" : "false");
         });
+        document.querySelectorAll("[data-lang-current]").forEach(function (el) {
+          el.textContent = SHORT[lang] || "EN";
+        });
+      }
+      function closeMenu() {
+        var m = document.getElementById("lang-menu"); if (m) m.classList.add("hidden");
+        var t = document.getElementById("lang-toggle"); if (t) t.setAttribute("aria-expanded", "false");
       }
       function apply(lang) {
         collect();
@@ -279,10 +294,29 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
         apply(lang);
       }
       document.addEventListener("click", function (e) {
-        var b = e.target.closest ? e.target.closest("[data-lang-btn]") : null;
-        if (!b) return;
-        e.preventDefault();
-        setLang(b.getAttribute("data-lang-btn"));
+        var node = e.target;
+        // Toggle the desktop dropdown.
+        var toggle = node.closest ? node.closest("#lang-toggle") : null;
+        if (toggle) {
+          e.preventDefault();
+          var m = document.getElementById("lang-menu");
+          if (m) {
+            var willOpen = m.classList.contains("hidden");
+            m.classList.toggle("hidden");
+            toggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+          }
+          return;
+        }
+        // Pick a language.
+        var b = node.closest ? node.closest("[data-lang-btn]") : null;
+        if (b) {
+          e.preventDefault();
+          setLang(b.getAttribute("data-lang-btn"));
+          closeMenu();
+          return;
+        }
+        // Click outside closes the dropdown.
+        if (!(node.closest && node.closest("#lang-switch"))) closeMenu();
       });
       // Expose so dynamically-injected UI (auth menu, etc.) can re-translate.
       window.AP_I18N = { apply: function () { collected = false; textNodes = []; elNodes = []; attrNodes = []; apply(current); }, lang: function () { return current; }, set: setLang };
@@ -291,20 +325,33 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
   </script>
 
   <style is:global>
-    .lang-btn {
-      border-radius: 9999px;
-      padding: 0.25rem 0.6rem;
-      font-size: 0.75rem;
+    /* Desktop dropdown items */
+    .lang-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      border-radius: 0.6rem;
+      padding: 0.5rem 0.7rem;
+      font-size: 0.85rem;
       font-weight: 600;
       color: var(--muted, #6b7280);
-      line-height: 1;
-      transition: background-color .15s, color .15s;
+      transition: background-color .12s, color .12s;
     }
-    .lang-btn:hover { color: var(--brand-700, #1d4ed8); }
-    .lang-btn.lang-active {
-      background: var(--brand-600, #2563eb);
-      color: #fff;
+    .lang-item:hover { background: var(--brand-50, #eff4ff); color: var(--brand-700, #1d4ed8); }
+    .lang-item.lang-active { color: var(--brand-700, #1d4ed8); }
+    .lang-check { visibility: hidden; }
+    .lang-item.lang-active .lang-check { visibility: visible; }
+    /* Mobile segmented control */
+    .lang-seg {
+      border-radius: 0.55rem;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted, #6b7280);
+      transition: background-color .12s, color .12s;
     }
+    .lang-seg.lang-active { background: #fff; color: var(--brand-700, #1d4ed8); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
   </style>
 
   <script>
