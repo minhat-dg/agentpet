@@ -3,7 +3,6 @@
 //! the pet window. Mirrors the macOS app's unix-socket daemon, but cross-platform.
 
 use serde_json::Value;
-use std::io::Read;
 use tauri::{AppHandle, Emitter};
 
 pub const HOOK_PORT: u16 = 47628;
