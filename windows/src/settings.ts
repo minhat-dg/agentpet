@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { loadCatalog, savedSlug, saveSlug, type Pet } from "./catalog";
+import { t, getLang, setLang, type Lang } from "./i18n";
 
 // ---------------------------------------------------------------- agents ----
 interface AgentInfo {
@@ -12,30 +13,35 @@ interface AgentInfo {
 }
 
 const agentsRoot = document.getElementById("agents")!;
+let agentsCache: AgentInfo[] = [];
 
-async function refreshAgents() {
-  const agents = await invoke<AgentInfo[]>("list_agents");
+async function loadAgents() {
+  agentsCache = await invoke<AgentInfo[]>("list_agents");
+  renderAgents();
+}
+
+function renderAgents() {
   agentsRoot.innerHTML = "";
-  for (const a of agents) {
+  for (const a of agentsCache) {
     const row = document.createElement("div");
     row.className = "agent-row";
 
     const meta = document.createElement("div");
     meta.className = "meta";
     const status = a.note
-      ? `<div class="note">${esc(a.note)}</div>`
+      ? `<div class="note">${esc(t(a.note))}</div>`
       : a.installed
-      ? `<div class="ok">Hook installed</div>`
+      ? `<div class="ok">${esc(t("Hook installed"))}</div>`
       : "";
     meta.innerHTML = `<div class="name">${esc(a.display_name)}</div>${status}`;
 
     const btn = document.createElement("button");
-    btn.textContent = a.installed ? "Remove" : "Install";
+    btn.textContent = a.installed ? t("Remove") : t("Install");
     if (a.installed) btn.classList.add("remove");
     btn.onclick = async () => {
       btn.disabled = true;
       try { await invoke("toggle_install", { kind: a.kind }); } catch (e) { alert(String(e)); }
-      await refreshAgents();
+      await loadAgents();
     };
 
     row.appendChild(meta);
@@ -51,17 +57,20 @@ const random = document.getElementById("pet-random") as HTMLButtonElement;
 const results = document.getElementById("pet-results") as HTMLDivElement;
 
 let catalog: Pet[] = [];
+let currentPet: Pet | undefined;
 
 async function pick(p: Pet) {
   saveSlug(p.slug);
   await emit("set-pet", { slug: p.slug, url: p.spritesheetUrl });
-  showCurrent(p);
+  currentPet = p;
+  showCurrent();
   results.innerHTML = "";
   search.value = "";
 }
 
-function showCurrent(p: Pet | undefined) {
-  current.textContent = p ? `Showing: ${p.name}` : "Showing: (default)";
+function showCurrent() {
+  if (!catalog.length) { current.textContent = t("Couldn't load pets , check your internet connection."); return; }
+  current.textContent = `${t("Showing:")} ${currentPet ? currentPet.name : t("(default)")}`;
 }
 
 function renderResults(list: Pet[]) {
@@ -77,13 +86,8 @@ function renderResults(list: Pet[]) {
 
 async function initPet() {
   catalog = await loadCatalog();
-  if (!catalog.length) {
-    current.textContent = "Couldn't load pets , check your internet connection.";
-    return;
-  }
-  const slug = savedSlug();
-  showCurrent(catalog.find((p) => p.slug === slug));
-
+  currentPet = catalog.find((p) => p.slug === savedSlug());
+  showCurrent();
   search.addEventListener("input", () => {
     const q = search.value.trim().toLowerCase();
     if (!q) { results.innerHTML = ""; return; }
@@ -92,10 +96,6 @@ async function initPet() {
   random.addEventListener("click", () => {
     if (catalog.length) pick(catalog[Math.floor(Math.random() * catalog.length)]);
   });
-}
-
-function esc(s: string): string {
-  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c));
 }
 
 // --------------------------------------------------------------- startup ----
@@ -107,7 +107,40 @@ async function initAutostart() {
   });
 }
 
-refreshAgents();
+// ----------------------------------------------------------------- i18n ----
+function applyStatic() {
+  document.documentElement.lang = getLang();
+  const set = (id: string, key: string) => { const el = document.getElementById(id); if (el) el.textContent = t(key); };
+  set("t-pet", "Your pet");
+  set("t-pet-sub", "Pick the companion that floats on your desktop.");
+  set("t-agents", "Agent integrations");
+  set("t-agents-sub", "Install a hook so AgentPet can see when an agent works, finishes, or needs you.");
+  set("t-startup", "Startup");
+  set("t-autostart", "Start AgentPet when Windows starts");
+  search.placeholder = t("Search pets by name...");
+}
+
+function initLang() {
+  const sel = document.getElementById("lang") as HTMLSelectElement;
+  sel.value = getLang();
+  applyStatic();
+  // Tell the tray (Rust) + the pet window about the initial language too.
+  invoke("set_lang", { code: getLang() }).catch(() => {});
+  sel.addEventListener("change", async () => {
+    setLang(sel.value as Lang);
+    applyStatic();
+    renderAgents();
+    showCurrent();
+    invoke("set_lang", { code: getLang() }).catch(() => {});
+    await emit("lang-changed", getLang());
+  });
+}
+
+function esc(s: string): string {
+  return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] || c));
+}
+
+initLang();
+loadAgents();
 initPet();
 initAutostart();
-

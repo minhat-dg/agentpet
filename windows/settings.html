@@ -6,10 +6,17 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body class="settings">
-    <h1>AgentPet</h1>
+    <div class="topbar">
+      <h1>AgentPet</h1>
+      <select id="lang" class="lang-select">
+        <option value="en">English</option>
+        <option value="vi">Tiếng Việt</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
 
-    <h2 class="section">Your pet</h2>
-    <div class="sub">Pick the companion that floats on your desktop.</div>
+    <h2 class="section" id="t-pet">Your pet</h2>
+    <div class="sub" id="t-pet-sub">Pick the companion that floats on your desktop.</div>
     <div id="pet-current" class="pet-current"></div>
     <div class="pet-controls">
       <input id="pet-search" type="text" placeholder="Search pets by name..." autocomplete="off" />
@@ -17,12 +24,12 @@
     </div>
     <div id="pet-results" class="pet-results"></div>
 
-    <h2 class="section">Agent integrations</h2>
-    <div class="sub">Install a hook so AgentPet can see when an agent works, finishes, or needs you.</div>
+    <h2 class="section" id="t-agents">Agent integrations</h2>
+    <div class="sub" id="t-agents-sub">Install a hook so AgentPet can see when an agent works, finishes, or needs you.</div>
     <div id="agents"></div>
 
-    <h2 class="section">Startup</h2>
-    <label class="toggle-row"><input type="checkbox" id="autostart" /> Start AgentPet when Windows starts</label>
+    <h2 class="section" id="t-startup">Startup</h2>
+    <label class="toggle-row"><input type="checkbox" id="autostart" /> <span id="t-autostart">Start AgentPet when Windows starts</span></label>
 
     <script type="module" src="/src/settings.ts"></script>
   </body>
