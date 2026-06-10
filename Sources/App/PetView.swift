@@ -890,6 +890,7 @@ struct ChatBubble: View {
             Text(text)
                 .font(.system(size: settings.fontSize.primaryPt, weight: .medium))
                 .foregroundStyle(textColor)
+                .contentTransition(.opacity)   // cross-fade text changes instead of a hard swap (no flicker)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .padding(.horizontal, 12)
