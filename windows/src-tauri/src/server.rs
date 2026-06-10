@@ -29,6 +29,7 @@ fn handle_event(app: &AppHandle, body: &str) {
     let session = v.get("session").and_then(|x| x.as_str()).unwrap_or("");
     let project = v.get("project").and_then(|x| x.as_str()).unwrap_or("");
     let message = v.get("message").and_then(|x| x.as_str()).unwrap_or("");
+    let tool = v.get("tool").and_then(|x| x.as_str()).unwrap_or("");
 
     if crate::statemap::is_session_end(agent, event) {
         let _ = app.emit_to("pet", "agent-end", session);
@@ -37,7 +38,7 @@ fn handle_event(app: &AppHandle, body: &str) {
     let Some(state) = crate::statemap::state(agent, event) else { return };
     let payload = serde_json::json!({
         "agent": agent, "state": state, "session": session,
-        "project": project, "message": message,
+        "project": project, "message": message, "tool": tool,
     });
     let _ = app.emit_to("pet", "agent-event", payload);
 }

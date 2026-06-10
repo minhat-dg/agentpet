@@ -64,6 +64,13 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: node scripts/make-latest-json.mjs
 
+      # A standalone, installer-free build for the Scoop bucket (Scoop manages
+      # portable apps, not system installers). WebView2 ships with Win10/11.
+      - name: Package portable exe (for Scoop)
+        if: startsWith(github.ref, 'refs/tags/win-v')
+        shell: pwsh
+        run: Compress-Archive -Path src-tauri/target/release/agentpet.exe -DestinationPath AgentPet-portable-x64.zip -Force
+
       - name: Attach installers + updater manifest to release (on win-v* tag)
         if: startsWith(github.ref, 'refs/tags/win-v')
         uses: softprops/action-gh-release@v2
@@ -72,4 +79,5 @@ jobs:
             windows/src-tauri/target/release/bundle/nsis/*-setup.exe
             windows/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
             windows/src-tauri/target/release/bundle/msi/*.msi
+            windows/AgentPet-portable-x64.zip
             windows/latest.json

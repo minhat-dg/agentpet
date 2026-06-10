@@ -59,8 +59,10 @@ export class Pet {
     const fw = this.img.naturalWidth / COLS;
     const fh = this.img.naturalHeight / ROWS;
     if (!fw || !fh) return;
-    // Fit the frame into the canvas, anchored to the bottom.
-    const s = Math.min(W / fw, H / fh);
+    // Fit the frame into the canvas, anchored to the bottom. Snap to an integer
+    // scale so pixel-art stays crisp (no shimmering edges from fractional zoom).
+    const fit = Math.min(W / fw, H / fh);
+    const s = fit >= 1 ? Math.floor(fit) : fit;
     const dw = fw * s, dh = fh * s;
     this.ctx.drawImage(
       this.img,

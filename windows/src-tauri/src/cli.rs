@@ -20,6 +20,7 @@ pub fn run_hook(args: &[String]) {
             &flag(args, "--session").unwrap_or_default(),
             &flag(args, "--project").unwrap_or_default(),
             &flag(args, "--message").unwrap_or_default(),
+            "",
         );
     }
 
@@ -41,17 +42,44 @@ pub fn run_hook(args: &[String]) {
                 .map(String::from)
         })
         .unwrap_or_default();
-    let message = first_str(&v, &["message"]).unwrap_or_default();
+    let tool = first_str(&v, &["tool_name", "toolName"]).unwrap_or_default();
+    let message = first_str(&v, &["message"])
+        .or_else(|| tool_message(&tool, v.get("tool_input")))
+        .unwrap_or_default();
 
     if session.as_deref().unwrap_or("").is_empty() && event.as_deref().unwrap_or("").is_empty() {
         std::process::exit(0); // nothing useful; never block the agent
     }
-    post_and_exit(&agent, &event.unwrap_or_default(), &session.unwrap_or_default(), &project, &message);
+    post_and_exit(&agent, &event.unwrap_or_default(), &session.unwrap_or_default(), &project, &message, &tool);
 }
 
-fn post_and_exit(agent: &str, event: &str, session: &str, project: &str, message: &str) -> ! {
+/// Live-activity text from a tool-use hook (PreToolUse/PostToolUse), used when
+/// the agent sent no explicit message. Mirrors the macOS app's activity
+/// formatter in spirit: prefer the tool's own description, then the file being
+/// touched, then just the tool name.
+fn tool_message(tool: &str, input: Option<&Value>) -> Option<String> {
+    if tool.is_empty() {
+        return None;
+    }
+    if let Some(input) = input {
+        if let Some(d) = input.get("description").and_then(|x| x.as_str()) {
+            if !d.is_empty() {
+                return Some(d.to_string());
+            }
+        }
+        if let Some(p) = input.get("file_path").and_then(|x| x.as_str()) {
+            if let Some(name) = p.rsplit(['/', '\\']).next().filter(|s| !s.is_empty()) {
+                return Some(format!("{tool} · {name}"));
+            }
+        }
+    }
+    Some(format!("Using {tool}"))
+}
+
+fn post_and_exit(agent: &str, event: &str, session: &str, project: &str, message: &str, tool: &str) -> ! {
     let payload = serde_json::json!({
-        "agent": agent, "event": event, "session": session, "project": project, "message": message,
+        "agent": agent, "event": event, "session": session, "project": project,
+        "message": message, "tool": tool,
     })
     .to_string();
     let _ = post(&payload);

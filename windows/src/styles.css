@@ -55,6 +55,7 @@ html, body.overlay {
 }
 .bubble .agent { color: #f5a623; font-weight: 600; }
 .bubble .state { opacity: 0.6; margin-left: 6px; }
+.bubble .clock { opacity: 0.5; margin-left: 6px; font-variant-numeric: tabular-nums; }
 .bubble .dot { width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; flex: 0 0 auto; background: #8a93a6; }
 .bubble .brow[data-state="working"] .dot,
 .bubble .brow[data-state="registered"] .dot { background: #3b82f6; }

@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "description": "A desktop pet that reacts in real time to your AI coding agents (Claude Code, Codex, Gemini, Cursor, Copilot).",
+  "homepage": "https://github.com/ntd4996/agentpet",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/ntd4996/agentpet/releases/download/win-v0.1.0/AgentPet-portable-x64.zip",
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  "bin": "agentpet.exe",
+  "shortcuts": [["agentpet.exe", "AgentPet"]],
+  "notes": "Run 'AgentPet' (or launch from the Start menu shortcut) to start the pet. Open Settings from the tray icon to pick a pet and connect your agents.",
+  "checkver": {
+    "github": "https://github.com/ntd4996/agentpet",
+    "regex": "win-v([\\d.]+)"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/ntd4996/agentpet/releases/download/win-v$version/AgentPet-portable-x64.zip"
+      }
+    }
+  }
+}

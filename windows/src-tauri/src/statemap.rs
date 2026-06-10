@@ -34,7 +34,8 @@ pub fn state(kind: &str, event: &str) -> Option<&'static str> {
         },
         "gemini" => match event {
             "SessionStart" => Some("registered"),
-            "BeforeAgent" | "BeforeModel" | "BeforeTool" | "AfterTool" => Some("working"),
+            "BeforeAgent" | "BeforeModel" | "BeforeTool" | "AfterTool" | "BeforeToolSelection"
+            | "AfterModel" => Some("working"),
             "Notification" => Some("waiting"),
             "AfterAgent" | "SessionEnd" => Some("done"),
             _ => None,
@@ -47,8 +48,11 @@ pub fn state(kind: &str, event: &str) -> Option<&'static str> {
         },
         "copilot" => match event {
             "SessionStart" => Some("registered"),
-            "UserPromptSubmit" | "PostToolUse" | "PreToolUse" => Some("working"),
-            "Stop" | "SessionEnd" => Some("done"),
+            "UserPromptSubmit" | "UserPromptSubmitted" | "PostToolUse" | "PreToolUse" => {
+                Some("working")
+            }
+            "Notification" | "PermissionRequest" => Some("waiting"),
+            "Stop" | "AgentStop" | "SessionEnd" => Some("done"),
             _ => None,
         },
         "opencode" => match event {

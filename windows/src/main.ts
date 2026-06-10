@@ -1,4 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Pet } from "./pet";
 import { SessionStore } from "./state";
@@ -133,19 +134,32 @@ function render() {
   pet.setState(active[0]?.state ?? "idle");
 
   if (active.length) {
-    // Show every active agent (multi-agent), one row each, capped.
+    // Show every active agent (multi-agent), one row each, capped. Seed the
+    // phrase by session + current tool so the line changes as the agent moves
+    // between tools (like the macOS per-tool phrases).
     bubble.innerHTML = active.slice(0, 4).map((s) => {
       const label = t(STATE_LABEL[s.state] ?? "");
-      const msg = msgFor(s.state, s.session, s.agent, s.message);
+      const msg = msgFor(s.state, `${s.session}:${s.tool}`, s.agent, s.message);
       const proj = s.project ? s.project.split(/[\\/]/).pop() : "";
+      const clock = s.state === "working" || s.state === "waiting" ? elapsed(s.stateSince) : "";
       return `<div class="brow" data-state="${esc(s.state)}"><span class="dot"></span>` +
         `<span class="agent">${esc(s.agent)}</span>${proj ? " · " + esc(proj) : ""} ` +
-        `${esc(msg)}<span class="state">${esc(label)}</span></div>`;
+        `${esc(msg)}${clock ? `<span class="clock">${clock}</span>` : ""}` +
+        `<span class="state">${esc(label)}</span></div>`;
     }).join("");
     bubble.hidden = false;
   } else {
     bubble.hidden = true;
   }
+}
+
+// Live elapsed time in the current state ("12s", "3m08s", "1h04m") , the render
+// loop ticks every 500ms so it counts up like the macOS bubble clock.
+function elapsed(since: number): string {
+  const s = Math.max(0, Math.floor((Date.now() - since) / 1000));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s`;
+  return `${Math.floor(s / 3600)}h${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`;
 }
 setInterval(render, 500);
 
@@ -195,6 +209,19 @@ listen("bubble-changed", () => { applyBubble(); applyPet(); render(); });
 canvas.addEventListener("mousedown", async (e) => {
   if (e.button === 0) await getCurrentWindow().startDragging();
 });
+
+// Report the pet's opaque rect (physical px) so the rest of the transparent
+// window is click-through. ResizeObserver fires whenever the bubble grows/hides
+// or the pet is rescaled, keeping the interactive region tight.
+const petRoot = document.getElementById("pet-root") as HTMLElement;
+function reportHitRect() {
+  const r = petRoot.getBoundingClientRect();
+  const d = window.devicePixelRatio || 1;
+  invoke("set_hit_rect", { x: r.left * d, y: r.top * d, w: r.width * d, h: r.height * d }).catch(() => {});
+}
+new ResizeObserver(reportHitRect).observe(petRoot);
+window.addEventListener("resize", reportHitRect);
+reportHitRect();
 
 // Occasional idle chatter.
 setInterval(() => {

@@ -1,13 +1,53 @@
 # AgentPet for Windows
 
 A desktop pet that floats on your screen and reacts in real time to your AI
-coding agents (Claude Code, Codex, Gemini CLI, Cursor, GitHub Copilot). Windows
-port of the macOS app, built with [Tauri](https://tauri.app) so it stays small
-(~10 MB) and reuses the same pet catalog + hook model.
+coding agents (Claude Code, Codex, Gemini CLI, Cursor, opencode, Windsurf,
+Antigravity, GitHub Copilot, Kiro CLI). Windows port of the macOS app, built with
+[Tauri](https://tauri.app) so it stays small (~10 MB) and reuses the same pet
+catalog + hook model.
 
-> Status: **early scaffold.** Code-complete first pass; needs a Windows machine
-> (or CI) to build and test the `.msi`/`.exe`. Frontend + Rust compile on macOS
-> for development.
+> Status: feature-complete, builds on CI (`.msi` + NSIS `.exe`). Not yet
+> validated on a real Windows machine, and not code-signed (see
+> [SmartScreen](#smartscreen-no-code-signing-cert) below).
+
+## Install
+
+WebView2 is preinstalled on Windows 10/11, so there are no other prerequisites.
+
+### Scoop (recommended , no SmartScreen prompt)
+
+```powershell
+scoop bucket add agentpet https://github.com/ntd4996/agentpet
+scoop install agentpet
+```
+
+Scoop downloads the portable build straight from the GitHub release, so the
+browser/SmartScreen download warning never appears.
+
+### winget
+
+```powershell
+winget install ntd4996.AgentPet
+```
+
+### Manual installer
+
+Download `AgentPet_<version>_x64-setup.exe` from the
+[releases](https://github.com/ntd4996/agentpet/releases) page. It installs
+per-user (no admin/UAC prompt). See [SmartScreen](#smartscreen-no-code-signing-cert)
+for the one-time "Run anyway" step.
+
+## SmartScreen (no code-signing cert)
+
+The installer is **not code-signed** (a cert costs money), so Windows SmartScreen
+may show *"Windows protected your PC"* on first run of the downloaded `.exe`.
+It is safe to bypass:
+
+1. Click **More info**.
+2. Click **Run anyway**.
+
+To avoid the prompt entirely, install via **Scoop** or **winget** (above) , those
+paths don't trigger SmartScreen.
 
 ## How it works
 
@@ -28,23 +68,45 @@ agent hook  ──(stdin JSON)──►  agentpet.exe hook --agent <kind>
   `\.codex\hooks.json`, ...) , identical formats to the macOS app.
 - Pets come from the public CDN (`pets.thenightwatcher.online/manifest.json`),
   rendered from the 8x9 spritesheet (8 frames per state row).
+- The transparent overlay is **click-through**: only the pet's opaque rect
+  captures the mouse, so the empty area lets clicks reach the apps below. Drag
+  the pet to move it; its position is remembered across restarts.
+
+## Features (parity with macOS)
+
+- 9 agents, same hook formats as macOS.
+- Pet picker (search / random) + "use your own spritesheet".
+- Bubble customization: theme (dark/light/system), opacity, font size/family,
+  themed phrases, per-agent custom messages, idle chatter toggle.
+- Multi-agent bubble (shows every active session at once) with a live elapsed
+  clock and per-tool live activity text (file being edited, command description).
+- Live preview in Settings, desktop notifications + chimes, autostart,
+  auto-update (Tauri updater, minisign-signed).
+- i18n: English / Tiếng Việt / 简体中文 with a runtime language switcher.
 
 ## Develop
 
 ```bash
 cd windows
 npm install
-npm run tauri dev      # runs on macOS too (dev); target Windows for the real build
+npm run tauri dev      # runs on macOS too (dev); click-through is Windows-only
 ```
 
 ## Build (on Windows)
 
 ```bash
 npm install
-npm run tauri build    # produces an NSIS installer + MSI in src-tauri/target/release/bundle
+npm run tauri build    # NSIS installer + MSI in src-tauri/target/release/bundle
 ```
 
-Requires Rust + the Tauri prerequisites (WebView2 is preinstalled on Windows 10/11).
+## Build via CI (no Windows machine needed)
+
+`.github/workflows/windows-build.yml` builds the installers on `windows-latest`:
+
+- Run it manually from the **Actions** tab (workflow_dispatch) , the `.msi` and
+  `.exe` are uploaded as artifacts.
+- Push a tag like `win-v0.1.0` to also attach the installers, the portable
+  Scoop zip, and the signed updater manifest to a GitHub release.
 
 ## Agents
 
@@ -54,20 +116,25 @@ Requires Rust + the Tauri prerequisites (WebView2 is preinstalled on Windows 10/
 | Codex          | `~/.codex/hooks.json` + `config.toml`        | run `/hooks` → `t` once to trust |
 | Gemini CLI     | `~/.gemini/settings.json`                    | |
 | Cursor         | `~/.cursor/hooks.json`                        | |
+| opencode       | `~/.config/opencode/plugin/agentpet.js`      | JS plugin |
+| Windsurf       | `~/.codeium/windsurf/hooks.json`             | no "needs input" alerts |
+| Antigravity    | `~/.gemini/config/hooks.json`                | no "needs input" alerts |
 | GitHub Copilot | `~/.copilot/hooks/agentpet.json`             | Copilot CLI |
+| Kiro CLI       | `~/.kiro/agents/default.json`                | hooks the default agent |
 
-## Build via CI (no Windows machine needed)
+## Publishing the package manifests
 
-A GitHub Actions workflow (`.github/workflows/windows-build.yml`) builds the
-installers on `windows-latest`:
+After a `win-v*` release is published:
 
-- Run it manually from the **Actions** tab (workflow_dispatch) , the `.msi` and
-  `.exe` are uploaded as artifacts.
-- Push a tag like `win-v0.1.0` to also attach the installers to a GitHub release.
+```bash
+node scripts/fill-package-hashes.mjs win-v0.1.0
+```
 
-## TODO
+This fills the version + SHA256 into `packaging/scoop/agentpet.json` and
+`packaging/winget/*`. Then:
 
-- Pet picker / browser in Settings (currently a default pet; change via the
-  catalog).
-- Richer live-activity bubble text + i18n parity with the macOS app.
-- Click-through on transparent areas of the overlay.
+- **Scoop**: this repo doubles as the bucket , the manifest at
+  `windows/packaging/scoop/agentpet.json`. (Point the bucket subdir or copy it to
+  a `bucket/` folder as Scoop expects.)
+- **winget**: submit `packaging/winget/*` as a PR to
+  [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs).
