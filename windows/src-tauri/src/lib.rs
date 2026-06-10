@@ -3,9 +3,46 @@ pub mod hooks;
 pub mod server;
 pub mod statemap;
 
+use std::sync::Mutex;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+
+/// Tray menu items kept around so the language switcher can re-label them live.
+struct TrayItems {
+    settings: MenuItem<tauri::Wry>,
+    quit: MenuItem<tauri::Wry>,
+}
+
+fn lang_file() -> Option<std::path::PathBuf> {
+    dirs::config_dir().map(|d| d.join("AgentPet").join("lang"))
+}
+
+fn read_lang() -> String {
+    lang_file()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "en".into())
+}
+
+fn write_lang(code: &str) {
+    if let Some(p) = lang_file() {
+        if let Some(d) = p.parent() {
+            let _ = std::fs::create_dir_all(d);
+        }
+        let _ = std::fs::write(p, code);
+    }
+}
+
+/// Localised tray labels (the only app text on the Rust side).
+fn tray_labels(code: &str) -> (&'static str, &'static str) {
+    match code {
+        "vi" => ("Cài đặt", "Thoát AgentPet"),
+        "zh" => ("设置", "退出 AgentPet"),
+        _ => ("Settings", "Quit AgentPet"),
+    }
+}
 
 #[tauri::command]
 fn list_agents() -> Vec<hooks::AgentInfo> {
@@ -35,6 +72,20 @@ fn open_settings(app: tauri::AppHandle) {
         .build();
 }
 
+/// Persist the chosen language (for the tray on next launch) and re-label the
+/// tray menu items now. Called by the Settings language switcher.
+#[tauri::command]
+fn set_lang(app: tauri::AppHandle, code: String) {
+    write_lang(&code);
+    let (s, q) = tray_labels(&code);
+    if let Some(items) = app.try_state::<Mutex<TrayItems>>() {
+        if let Ok(it) = items.lock() {
+            let _ = it.settings.set_text(s);
+            let _ = it.quit.set_text(q);
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -46,7 +97,8 @@ pub fn run() {
             list_agents,
             is_installed,
             toggle_install,
-            open_settings
+            open_settings,
+            set_lang
         ])
         .setup(|app| {
             server::start(app.handle().clone());
@@ -65,10 +117,16 @@ pub fn run() {
             }
 
             // Tray menu , the pet window is frameless, so this is how you reach
-            // Settings or quit the app.
-            let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit AgentPet", true, None::<&str>)?;
+            // Settings or quit the app. Labels start in the saved language; the
+            // Settings switcher re-labels them live via the `set_lang` command.
+            let (s_lbl, q_lbl) = tray_labels(&read_lang());
+            let settings_i = MenuItem::with_id(app, "settings", s_lbl, true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", q_lbl, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&settings_i, &quit_i])?;
+            app.manage(Mutex::new(TrayItems {
+                settings: settings_i.clone(),
+                quit: quit_i.clone(),
+            }));
             let mut tray = TrayIconBuilder::new()
                 .tooltip("AgentPet")
                 .menu(&menu)
