@@ -262,10 +262,13 @@ const clouds = Array.from({ length: N_CLOUDS }, (_, i) => ({
       var KNOWN = {};
       for (var L in DICT) for (var k in DICT[L]) KNOWN[k] = 1;
 
-      var textNodes = [];  // { node, en, pre, post }
-      var elNodes = [];    // { el, en }
-      var attrNodes = [];  // { el, attr, en }
-      var collected = false;
+      // Original-English captured ONCE per node (while the DOM is still
+      // English), so switching back to EN restores it correctly.
+      var textList = [];            // text nodes we manage
+      var elList = [];              // [data-i18n] elements (en read from attribute)
+      var attrList = [];            // { el, attr }
+      var textOrig = new WeakMap();  // textNode -> { en, pre, post }
+      var attrOrig = new WeakMap();  // el -> { attr: en }
 
       function inSkip(node) {
         for (var p = node.parentNode; p && p.nodeType === 1; p = p.parentNode) {
