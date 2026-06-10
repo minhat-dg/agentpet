@@ -12,6 +12,9 @@ struct GrowingTextEditor: NSViewRepresentable {
         view.isRichText = false
         view.font = .preferredFont(forTextStyle: .callout)
         view.textColor = .labelColor
+        view.alignment = .left
+        view.defaultParagraphStyle = Self.leftStyle   // never justify (emoji lines stretched words)
+        view.typingAttributes[.paragraphStyle] = Self.leftStyle
         view.drawsBackground = false
         view.textContainerInset = NSSize(width: 4, height: 6)
         view.isVerticallyResizable = true
@@ -21,11 +24,24 @@ struct GrowingTextEditor: NSViewRepresentable {
         return view
     }
 
+    /// Forced left, non-justified. Setting `.string` can drop the alignment, so
+    /// we re-stamp this paragraph style on the whole content after every update.
+    static let leftStyle: NSParagraphStyle = {
+        let s = NSMutableParagraphStyle()
+        s.alignment = .left
+        s.lineBreakMode = .byWordWrapping
+        return s
+    }()
+
     func updateNSView(_ view: AutoTextView, context: Context) {
         if view.string != text {
             view.string = text
             view.invalidateIntrinsicContentSize()
         }
+        view.alignment = .left
+        view.textStorage?.addAttribute(
+            .paragraphStyle, value: Self.leftStyle,
+            range: NSRange(location: 0, length: (view.string as NSString).length))
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
