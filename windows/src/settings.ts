@@ -78,10 +78,33 @@ function renderResults(list: Pet[]) {
   for (const p of list.slice(0, 24)) {
     const item = document.createElement("button");
     item.className = "pet-item";
-    item.textContent = p.name;
+    const cv = document.createElement("canvas");
+    cv.width = 44; cv.height = 44; cv.className = "pet-thumb";
+    drawThumb(cv, p.spritesheetUrl);
+    const label = document.createElement("span");
+    label.textContent = p.name;
+    item.appendChild(cv);
+    item.appendChild(label);
     item.onclick = () => pick(p);
     results.appendChild(item);
   }
+}
+
+// Draws frame 0 (first column of the Idle row) of an 8x9 spritesheet as a preview.
+function drawThumb(cv: HTMLCanvasElement, url: string) {
+  const ctx = cv.getContext("2d");
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
+  const img = new Image();
+  img.onload = () => {
+    const fw = img.naturalWidth / 8, fh = img.naturalHeight / 9;
+    if (!fw || !fh) return;
+    const s = Math.min(cv.width / fw, cv.height / fh);
+    const dw = fw * s, dh = fh * s;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, fw, fh, (cv.width - dw) / 2, (cv.height - dh) / 2, dw, dh);
+  };
+  img.src = url;
 }
 
 async function initPet() {
@@ -102,32 +125,59 @@ async function initPet() {
 const MSG_STATES: [string, string][] = [
   ["working", "Working"], ["waiting", "Needs you"], ["done", "Done"], ["idle", "Idle"],
 ];
+const MSG_AGENTS: [string, string][] = [
+  ["all", "All agents"], ["claude", "Claude Code"], ["codex", "Codex"], ["gemini", "Gemini CLI"],
+  ["cursor", "Cursor"], ["opencode", "opencode"], ["windsurf", "Windsurf"],
+  ["antigravity", "Antigravity"], ["kiro", "Kiro CLI"], ["copilot", "GitHub Copilot"],
+];
 
 function initBubble() {
+  const changed = () => { emit("bubble-changed", null); };
   const theme = document.getElementById("theme") as HTMLSelectElement;
   const opacity = document.getElementById("opacity") as HTMLInputElement;
+  const fontSize = document.getElementById("font-size") as HTMLInputElement;
+  const fontFamily = document.getElementById("font-family") as HTMLSelectElement;
+  const msgAgent = document.getElementById("msg-agent") as HTMLSelectElement;
+  const editors = document.getElementById("msg-editors")!;
+
   theme.value = localStorage.getItem("ap_theme") || "dark";
   opacity.value = localStorage.getItem("ap_opacity") || "92";
-  const changed = () => { emit("bubble-changed", null); };
-  theme.addEventListener("change", () => { localStorage.setItem("ap_theme", theme.value); changed(); });
-  opacity.addEventListener("input", () => { localStorage.setItem("ap_opacity", opacity.value); changed(); });
+  fontSize.value = localStorage.getItem("ap_font_size") || "12";
+  fontFamily.value = localStorage.getItem("ap_font_family") || "system";
 
-  const editors = document.getElementById("msg-editors")!;
-  editors.innerHTML = "";
-  for (const [st, label] of MSG_STATES) {
-    const wrap = document.createElement("div");
-    wrap.className = "msg-editor";
-    const lbl = document.createElement("div");
-    lbl.className = "msg-label";
-    lbl.dataset.label = label; // re-translated by applyStatic
-    lbl.textContent = t(label);
-    const ta = document.createElement("textarea");
-    ta.value = localStorage.getItem("ap_msg_" + st) || "";
-    ta.addEventListener("input", () => { localStorage.setItem("ap_msg_" + st, ta.value); changed(); });
-    wrap.appendChild(lbl);
-    wrap.appendChild(ta);
-    editors.appendChild(wrap);
+  theme.onchange = () => { localStorage.setItem("ap_theme", theme.value); changed(); };
+  opacity.oninput = () => { localStorage.setItem("ap_opacity", opacity.value); changed(); };
+  fontSize.oninput = () => { localStorage.setItem("ap_font_size", fontSize.value); changed(); };
+  fontFamily.onchange = () => { localStorage.setItem("ap_font_family", fontFamily.value); changed(); };
+
+  msgAgent.innerHTML = "";
+  for (const [k, name] of MSG_AGENTS) {
+    const o = document.createElement("option");
+    o.value = k;
+    o.textContent = k === "all" ? t("All agents") : name; // brand names stay
+    msgAgent.appendChild(o);
   }
+
+  const build = (agent: string) => {
+    editors.innerHTML = "";
+    for (const [st, label] of MSG_STATES) {
+      const wrap = document.createElement("div");
+      wrap.className = "msg-editor";
+      const lbl = document.createElement("div");
+      lbl.className = "msg-label";
+      lbl.dataset.label = label;
+      lbl.textContent = t(label);
+      const ta = document.createElement("textarea");
+      const key = `ap_msg_${agent}_${st}`;
+      ta.value = localStorage.getItem(key) || "";
+      ta.addEventListener("input", () => { localStorage.setItem(key, ta.value); changed(); });
+      wrap.appendChild(lbl);
+      wrap.appendChild(ta);
+      editors.appendChild(wrap);
+    }
+  };
+  msgAgent.onchange = () => build(msgAgent.value);
+  build("all");
 }
 
 // --------------------------------------------------------- notifications ----
@@ -158,6 +208,14 @@ function applyStatic() {
   set("t-msg-help", "Custom messages (one per line, leave empty for default)");
   set("o-dark", "Dark");
   set("o-light", "Light");
+  set("t-fontsize", "Text size");
+  set("t-font", "Font");
+  set("o-system", "System");
+  set("o-rounded", "Rounded");
+  set("o-mono", "Monospace");
+  set("t-msg-agent", "For agent");
+  const allOpt = document.querySelector<HTMLOptionElement>('#msg-agent option[value="all"]');
+  if (allOpt) allOpt.textContent = t("All agents");
   document.querySelectorAll<HTMLElement>(".msg-label").forEach((el) => {
     if (el.dataset.label) el.textContent = t(el.dataset.label);
   });

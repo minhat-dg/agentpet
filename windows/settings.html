@@ -29,7 +29,16 @@
       <select id="theme"><option value="dark" id="o-dark">Dark</option><option value="light" id="o-light">Light</option></select></div>
     <div class="bubble-row"><span id="t-opacity">Opacity</span>
       <input type="range" id="opacity" min="60" max="100" /></div>
+    <div class="bubble-row"><span id="t-fontsize">Text size</span>
+      <input type="range" id="font-size" min="10" max="18" /></div>
+    <div class="bubble-row"><span id="t-font">Font</span>
+      <select id="font-family">
+        <option value="system" id="o-system">System</option>
+        <option value="rounded" id="o-rounded">Rounded</option>
+        <option value="mono" id="o-mono">Monospace</option>
+      </select></div>
     <div class="sub" id="t-msg-help">Custom messages (one per line, leave empty for default)</div>
+    <div class="bubble-row"><span id="t-msg-agent">For agent</span><select id="msg-agent"></select></div>
     <div id="msg-editors"></div>
 
     <h2 class="section" id="t-agents">Agent integrations</h2>

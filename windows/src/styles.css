@@ -29,22 +29,35 @@ html, body.overlay {
 }
 
 .bubble {
-  max-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 260px;
   padding: 6px 11px;
   border-radius: 13px;
   background: var(--bubble-bg, rgba(22, 24, 38, 0.92));
   color: var(--bubble-fg, #fff);
   border: 1px solid var(--bubble-border, transparent);
-  font-size: 12px;
+  font-size: var(--bubble-font-size, 12px);
+  font-family: var(--bubble-font-family, "Segoe UI", system-ui, sans-serif);
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
   transition: opacity 0.2s ease;
 }
+.bubble .brow {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .bubble .agent { color: #f5a623; font-weight: 600; }
 .bubble .state { opacity: 0.6; margin-left: 6px; }
+.bubble .dot { width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; flex: 0 0 auto; background: #8a93a6; }
+.bubble .brow[data-state="working"] .dot,
+.bubble .brow[data-state="registered"] .dot { background: #3b82f6; }
+.bubble .brow[data-state="waiting"] .dot { background: #f59e0b; }
+.bubble .brow[data-state="done"] .dot { background: #22c55e; }
 
 /* Settings window uses a normal opaque look. */
 body.settings {
@@ -76,12 +89,15 @@ body.settings {
   background: rgba(255,255,255,0.10); border: 0; border-radius: 7px;
   padding: 7px 11px; cursor: pointer; font-size: 15px;
 }
-.pet-results { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 160px; overflow-y: auto; }
+.pet-results { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 200px; overflow-y: auto; }
 .pet-item {
-  background: rgba(255,255,255,0.08); color: #e9ecff; border: 0; border-radius: 6px;
-  padding: 5px 9px; font-size: 12px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; width: 72px;
+  background: rgba(255,255,255,0.08); color: #e9ecff; border: 0; border-radius: 8px;
+  padding: 6px 4px; font-size: 11px; cursor: pointer;
 }
+.pet-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pet-item:hover { background: #3b76f6; }
+.pet-thumb { width: 44px; height: 44px; image-rendering: pixelated; }
 .agent-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.08);
