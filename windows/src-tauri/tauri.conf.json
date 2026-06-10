@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AgentPet",
+  "version": "0.1.0",
+  "identifier": "online.thenightwatcher.agentpet",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "pet",
+        "title": "AgentPet",
+        "url": "index.html",
+        "width": 200,
+        "height": 220,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "focus": false,
+        "x": 1200,
+        "y": 600
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' https://pets.thenightwatcher.online data: ; connect-src 'self' https://pets.thenightwatcher.online ipc: http://ipc.localhost ; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "shortDescription": "A desktop pet that watches your AI coding agents.",
+    "longDescription": "AgentPet floats a pixel companion on your desktop that reacts in real time to your AI coding agents (Claude Code, Codex, Gemini, Cursor, ...)."
+  }
+}
