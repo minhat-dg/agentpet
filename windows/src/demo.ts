@@ -57,6 +57,26 @@ export function initDemo() {
   let lastAgg = "idle";
   let tick: number | null = null;
 
+  // The stage bubble uses the same CSS vars as the real pet window; the
+  // Settings window must apply them itself (and re-apply as settings change)
+  // so the preview updates LIVE with theme/opacity/font size.
+  function applyBubbleVars() {
+    let theme = localStorage.getItem("ap_theme") || "dark";
+    if (theme === "system") theme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    const op = (parseInt(localStorage.getItem("ap_opacity") || "92", 10) || 92) / 100;
+    const r = document.documentElement.style;
+    if (theme === "light") {
+      r.setProperty("--bubble-bg", `rgba(255,255,255,${op})`);
+      r.setProperty("--bubble-fg", "#1a1d2e");
+      r.setProperty("--bubble-border", "rgba(0,0,0,0.08)");
+    } else {
+      r.setProperty("--bubble-bg", `rgba(22,24,38,${op})`);
+      r.setProperty("--bubble-fg", "#ffffff");
+      r.setProperty("--bubble-border", "rgba(255,255,255,0.10)");
+    }
+    r.setProperty("--bubble-font-size", `${parseInt(localStorage.getItem("ap_font_size") || "12", 10) || 12}px`);
+  }
+
   const count = (kind: string) => sessions.filter((s) => s.agent === kind).length;
   const active = () => sessions.filter((s) => s.state === "working" || s.state === "waiting");
   const mood = () => (celebrating ? "celebrate" : aggregateMood(sessions));
@@ -133,6 +153,7 @@ export function initDemo() {
   }
 
   function paint() {
+    applyBubbleVars();
     const m = mood();
     moodChip.textContent = t(m.charAt(0).toUpperCase() + m.slice(1));
     moodChip.dataset.mood = m;

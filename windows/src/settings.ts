@@ -462,7 +462,11 @@ function initBubble() {
   const editors = document.getElementById("msg-editors")!;
 
   opacity.value = localStorage.getItem("ap_opacity") || "92";
-  opacity.oninput = () => { localStorage.setItem("ap_opacity", opacity.value); changed(); };
+  opacity.oninput = () => {
+    localStorage.setItem("ap_opacity", opacity.value);
+    changed();
+    document.dispatchEvent(new CustomEvent("seg-changed", { detail: "ap_opacity" }));
+  };
 
   // Multi-agent bubble master toggle (mac BubbleSettings.multiAgentBubbleEnabled).
   const multi = document.getElementById("multi") as HTMLInputElement;
@@ -651,6 +655,8 @@ function initBubbleDisplay() {
       }
     }
     if (!row.childElementCount) { row.textContent = t("(empty)"); row.classList.add("pv-dim"); }
+    row.style.fontSize = `${parseInt(localStorage.getItem("ap_font_size") || "12", 10) || 12}px`;
+    row.style.opacity = String((parseInt(localStorage.getItem("ap_opacity") || "92", 10) || 92) / 100);
     preview.appendChild(row);
     row.style.display = "inline-flex";
   }
