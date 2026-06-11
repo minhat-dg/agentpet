@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
-use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
 
 /// Tray menu items kept around so the language switcher can re-label them live.
 struct TrayItems {
@@ -171,6 +171,61 @@ fn set_tray_status(app: tauri::AppHandle, working: u32, waiting: u32) {
     }
 }
 
+#[tauri::command]
+fn get_pet_visible(app: tauri::AppHandle) -> bool {
+    app.get_webview_window("pet")
+        .and_then(|w| w.is_visible().ok())
+        .unwrap_or(true)
+}
+
+/// Show the popover (the macOS menu-bar popover equivalent) near the cursor.
+fn show_popover(app: &tauri::AppHandle) {
+    let win = match app.get_webview_window("popover") {
+        Some(w) => w,
+        None => {
+            match WebviewWindowBuilder::new(app, "popover", WebviewUrl::App("popover.html".into()))
+                .title("AgentPet")
+                .inner_size(300.0, 430.0)
+                .decorations(false)
+                .transparent(true)
+                .always_on_top(true)
+                .skip_taskbar(true)
+                .resizable(false)
+                .visible(false)
+                .build()
+            {
+                Ok(w) => w,
+                Err(_) => return,
+            }
+        }
+    };
+    // Place near the cursor, clamped onto the monitor under it.
+    if let Ok(cur) = app.cursor_position() {
+        let sf = win.scale_factor().unwrap_or(1.0);
+        let (w, h) = (300.0 * sf, 430.0 * sf);
+        let mut x = cur.x - w / 2.0;
+        let mut y = cur.y - h - 12.0; // prefer above the cursor (tray at bottom)
+        if let Ok(Some(mon)) = app.monitor_from_point(cur.x, cur.y) {
+            let mp = mon.position();
+            let ms = mon.size();
+            if y < mp.y as f64 {
+                y = cur.y + 12.0; // no room above , drop below
+            }
+            x = x.max(mp.x as f64).min(mp.x as f64 + ms.width as f64 - w);
+            y = y.max(mp.y as f64).min(mp.y as f64 + ms.height as f64 - h);
+        }
+        let _ = win.set_position(PhysicalPosition::new(x, y));
+    }
+    let _ = win.show();
+    let _ = win.set_focus();
+    let _ = win.emit("popover-shown", ());
+}
+
+#[tauri::command]
+fn open_popover(app: tauri::AppHandle) {
+    show_popover(&app);
+}
+
 /// Show/hide the pet overlay (tray toggle , the macOS "Show pet" switch).
 #[tauri::command]
 fn set_pet_visible(app: tauri::AppHandle, visible: bool) {
@@ -216,6 +271,8 @@ pub fn run() {
             set_lang,
             set_tray_status,
             set_pet_visible,
+            get_pet_visible,
+            open_popover,
             set_hit_rect
         ])
         .setup(|app| {
@@ -314,6 +371,19 @@ pub fn run() {
             let mut tray = TrayIconBuilder::new()
                 .tooltip("AgentPet")
                 .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_tray_icon_event(|tray, event| {
+                    // Left-click opens the popover, like clicking the macOS
+                    // status item. Right-click keeps the native menu.
+                    if let tauri::tray::TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_popover(tray.app_handle());
+                    }
+                })
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show_pet" => {
                         let now_visible = app

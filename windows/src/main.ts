@@ -270,7 +270,11 @@ bubbleEl.addEventListener("mousedown", async (e) => {
 });
 canvas.addEventListener("contextmenu", (e) => {
   e.preventDefault();
-  invoke("open_settings").catch(() => {});
+  if (pet.hitTest(e.offsetX, e.offsetY)) invoke("open_popover").catch(() => {});
+});
+bubbleEl.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  invoke("open_popover").catch(() => {});
 });
 
 // Report the interactive region (physical px) for Windows click-through: the
