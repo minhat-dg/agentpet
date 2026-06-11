@@ -4,7 +4,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch, exit } from "@tauri-apps/plugin-process";
 import { SessionStore, basename, type AgentEventPayload, type Session } from "./state";
@@ -108,9 +108,9 @@ size.oninput = () => {
   emit("bubble-changed", null);
 };
 
-(document.getElementById("pop-settings") as HTMLButtonElement).onclick = async () => {
-  await getCurrentWindow().hide();
+(document.getElementById("pop-settings") as HTMLButtonElement).onclick = () => {
   invoke("open_settings").catch(() => {});
+  void getCurrentWindow().hide();
 };
 (document.getElementById("pop-quit") as HTMLButtonElement).onclick = () => { exit(0); };
 
@@ -147,18 +147,32 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") void getCurrentWindow().hide();
 });
 
-listen<AgentEventPayload>("agent-event", (e) => { store.update(e.payload); paint(); });
-listen<string>("agent-end", (e) => { store.remove(e.payload); paint(); });
-listen<Session>("session-snapshot", (e) => { store.seed(e.payload); paint(); });
+listen<AgentEventPayload>("agent-event", (e) => { store.update(e.payload); paintAndFit(); });
+listen<string>("agent-end", (e) => { store.remove(e.payload); paintAndFit(); });
+listen<Session>("session-snapshot", (e) => { store.seed(e.payload); paintAndFit(); });
 // Re-sync + refresh whenever the popover is shown again.
 listen("popover-shown", () => {
   size.value = localStorage.getItem("ap_pet_size") || "100";
   invoke<boolean>("get_pet_visible").then((v) => { showPet.checked = v; }).catch(() => {});
   emit("sessions-request", null);
-  paint();
+  paintAndFit();
 });
 emit("sessions-request", null);
 
-setInterval(paint, 1000); // live elapsed + prune
+// Hug the content height like the macOS popover (no dead space).
+let lastH = 0;
+function fitWindow() {
+  const card = document.querySelector(".pop-card") as HTMLElement;
+  if (!card) return;
+  const h = Math.min(560, Math.max(220, card.scrollHeight + 20));
+  if (Math.abs(h - lastH) < 2) return;
+  lastH = h;
+  getCurrentWindow().setSize(new LogicalSize(300, h)).catch(() => {});
+}
+
+const origPaint = paint;
+function paintAndFit() { origPaint(); fitWindow(); }
+
+setInterval(paintAndFit, 1000); // live elapsed + prune
 applyStatic();
-paint();
+paintAndFit();
