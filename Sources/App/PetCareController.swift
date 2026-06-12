@@ -66,3 +66,45 @@ final class PetCareController: ObservableObject {
         }
     }
 }
+
+/// Care-driven chatter: hunger and near-limit anxiety colour the idle pool.
+enum CareChat {
+    static let hungry = [
+        "Getting hungry… run an agent?",
+        "A little snack? One small task?",
+        "My tummy is rumbling…",
+        "Feed me some tokens, please.",
+    ]
+
+    static let starving = [
+        "Starving… nothing to eat for days…",
+        "So weak… one tiny session, please…",
+        "No tokens… no energy…",
+        "Remember me? Your pet? The hungry one?",
+    ]
+
+    static let anxious = [
+        "Careful… your AI budget is almost gone.",
+        "Low fuel: a usage limit is nearly reached!",
+        "Maybe save some tokens for tomorrow…",
+    ]
+
+    /// Mixes care lines into the idle pool: starving replaces it entirely,
+    /// hungry and limit-anxiety blend in.
+    @MainActor
+    static func idlePool(base: [String]) -> [String] {
+        var pool = base
+        switch PetCareController.shared.hunger {
+        case .starving:
+            pool = starving.map { NSLocalizedString($0, comment: "starving pet line") }
+        case .hungry:
+            pool += hungry.map { NSLocalizedString($0, comment: "hungry pet line") }
+        default:
+            break
+        }
+        if OpenUsageClient.shared.limitLow {
+            pool += anxious.map { NSLocalizedString($0, comment: "limit anxiety line") }
+        }
+        return pool
+    }
+}

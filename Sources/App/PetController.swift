@@ -198,7 +198,7 @@ final class PetController: ObservableObject {
                 let pool = BubbleSettings.shared.multiAgentBubbleEnabled
                     ? BubbleMessages.shared.lines(for: nil, mood: .idle)
                     : ChatSettings.shared.lines(for: .idle)
-                chatLine = pool.randomElement() ?? IdleBoost.line()
+                chatLine = CareChat.idlePool(base: pool).randomElement() ?? IdleBoost.line()
             }
             StatusBarController.shared.refreshTitle()
             return
