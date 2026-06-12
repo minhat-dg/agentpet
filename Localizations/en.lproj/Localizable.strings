@@ -321,3 +321,4 @@
 "Could not reach the server." = "Could not reach the server.";
 "Sync failed, will retry." = "Sync failed, will retry.";
 "Today %@ tokens · %d meals" = "Today %@ tokens · %d meals";
+"Today %@ tokens · 1 meal" = "Today %@ tokens · 1 meal";

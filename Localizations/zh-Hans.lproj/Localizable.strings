@@ -321,3 +321,4 @@
 "Could not reach the server." = "无法连接服务器。";
 "Sync failed, will retry." = "同步失败，稍后重试。";
 "Today %@ tokens · %d meals" = "今天 %@ token · %d 餐";
+"Today %@ tokens · 1 meal" = "今天 %@ token · 1 餐";

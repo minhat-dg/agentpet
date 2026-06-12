@@ -321,3 +321,4 @@
 "Could not reach the server." = "Không kết nối được máy chủ.";
 "Sync failed, will retry." = "Đồng bộ thất bại, sẽ thử lại.";
 "Today %@ tokens · %d meals" = "Hôm nay %@ token · %d bữa";
+"Today %@ tokens · 1 meal" = "Hôm nay %@ token · 1 bữa";

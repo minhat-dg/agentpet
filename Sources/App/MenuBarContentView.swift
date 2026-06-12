@@ -124,6 +124,9 @@ struct MenuContentView: View {
         let tokens = care.current.tokensToday
         let label = tokens >= 1_000_000 ? String(format: "%.1fM", Double(tokens) / 1_000_000)
             : tokens >= 1_000 ? String(format: "%.0fk", Double(tokens) / 1_000) : "\(tokens)"
+        if care.current.mealsToday == 1 {
+            return String(format: NSLocalizedString("Today %@ tokens · 1 meal", comment: "popover care today line, singular"), label)
+        }
         return String(
             format: NSLocalizedString("Today %@ tokens · %d meals", comment: "popover care today line"),
             label, care.current.mealsToday
