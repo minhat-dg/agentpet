@@ -100,7 +100,7 @@ struct CareTabView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: "OpenUsage")
                         Text(usage.available
-                             ? "Connected , subscription limits below."
+                             ? "Connected: subscription limits below."
                              : "Optional: install OpenUsage to track every provider's limits.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
