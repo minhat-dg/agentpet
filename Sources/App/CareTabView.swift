@@ -18,22 +18,30 @@ struct CareTabView: View {
     private static let stageIcons = ["leaf.fill", "pawprint.fill", "binoculars.fill", "shield.fill", "crown.fill"]
     private static let stageColors: [Color] = [.green, .teal, .blue, .purple, .orange]
 
+    private var currentPack: ImagePetPack? {
+        pet.selectedPetID.flatMap { imagePets.pack(id: $0) }
+    }
+
     private var currentName: String {
-        pet.selectedPetID.flatMap { imagePets.pack(id: $0)?.displayName } ?? NSLocalizedString("Your pet", comment: "")
+        currentPack?.displayName ?? NSLocalizedString("Your pet", comment: "")
     }
 
     var body: some View {
         Form {
             Section("Companion") {
                 HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(stageColor.opacity(0.18))
-                            .frame(width: 52, height: 52)
-                        Image(systemName: stageIcon)
-                            .font(.system(size: 22))
-                            .foregroundStyle(stageColor)
+                    Group {
+                        if let frame = currentPack?.clip(0).first {
+                            Image(nsImage: frame).resizable().interpolation(.none).scaledToFit()
+                                .padding(5)
+                        } else {
+                            Image(systemName: stageIcon)
+                                .font(.system(size: 22))
+                                .foregroundStyle(stageColor)
+                        }
                     }
+                    .frame(width: 52, height: 52)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(stageColor.opacity(0.16)))
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
                             Text(verbatim: currentName)
@@ -221,10 +229,16 @@ struct CareTabView: View {
         let idx = PetCare.stageIndex(forLevel: lv)
         let color = Self.stageColors[min(idx, Self.stageColors.count - 1)]
         HStack(spacing: 10) {
-            Image(systemName: Self.stageIcons[min(idx, Self.stageIcons.count - 1)])
-                .font(.system(size: 13))
-                .foregroundStyle(color)
-                .frame(width: 22)
+            Group {
+                if let frame = imagePets.pack(id: id)?.clip(0).first {
+                    Image(nsImage: frame).resizable().interpolation(.none).scaledToFit()
+                } else {
+                    Image(systemName: Self.stageIcons[min(idx, Self.stageIcons.count - 1)])
+                        .font(.system(size: 13))
+                        .foregroundStyle(color)
+                }
+            }
+            .frame(width: 24, height: 24)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(verbatim: imagePets.pack(id: id)?.displayName ?? id)

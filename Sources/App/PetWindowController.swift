@@ -70,7 +70,8 @@ final class PetWindowController: ObservableObject {
             MainActor.assumeIsolated { self?.ensureOnScreen() }
         }
 
-        // Right-click the pet to open the popover anchored at the pet.
+        // Right-click the pet to show its stats card (info only — controls
+        // stay in the menu bar popover and Settings).
         rightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { [weak self] event in
             let handled = MainActor.assumeIsolated { () -> Bool in
                 guard let self, let panel = self.panel, event.window === panel,
@@ -78,11 +79,27 @@ final class PetWindowController: ObservableObject {
                 let petPoint = PetController.shared.petPoint
                 let rect = NSRect(x: (content.bounds.width - petPoint) / 2, y: 0,
                                   width: petPoint, height: petPoint)
-                StatusBarController.shared.showPopover(relativeTo: rect, of: content, edge: .maxY)
+                self.showStatsPopover(relativeTo: rect, of: content)
                 return true
             }
             return handled ? nil : event
         }
+    }
+
+    /// Transient stats-only popover anchored at the pet.
+    private var statsPopover: NSPopover?
+
+    private func showStatsPopover(relativeTo rect: NSRect, of view: NSView) {
+        if let shown = statsPopover, shown.isShown {
+            shown.performClose(nil)
+            return
+        }
+        let popover = NSPopover()
+        popover.behavior = .transient
+        popover.animates = true
+        popover.contentViewController = NSHostingController(rootView: PetStatsView())
+        statsPopover = popover
+        popover.show(relativeTo: rect, of: view, preferredEdge: .maxY)
     }
 
     /// First-time placement: bottom-right of the main screen.

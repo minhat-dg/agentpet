@@ -409,8 +409,18 @@ private struct PetTab: View {
                         .frame(width: 84, height: 84)
                         .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary))
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(selectedPack?.displayName ?? "No pet selected")
-                            .font(.title3.weight(.semibold))
+                        HStack(spacing: 8) {
+                            Text(selectedPack?.displayName ?? "No pet selected")
+                                .font(.title3.weight(.semibold))
+                            if let pack = selectedPack,
+                               let state = PetCareController.shared.states[pack.id], state.xp > 0 {
+                                Text(verbatim: "Lv \(PetCare.level(forXP: state.xp))")
+                                    .font(.caption.weight(.bold))
+                                    .padding(.horizontal, 7).padding(.vertical, 2)
+                                    .background(Capsule().fill(Color.systemAccent.opacity(0.2)))
+                                    .foregroundStyle(Color.systemAccent)
+                            }
+                        }
                         if let desc = selectedPack?.description {
                             Text(desc).font(.callout).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -583,6 +593,12 @@ private struct PetThumb: View {
     var onDelete: (() -> Void)? = nil
     @State private var hovering = false
 
+    /// This companion's level — shown once it has been fed at least once.
+    private var level: Int? {
+        guard let state = PetCareController.shared.states[pack.id], state.xp > 0 else { return nil }
+        return PetCare.level(forXP: state.xp)
+    }
+
     var body: some View {
         Button(action: select) {
             VStack(spacing: 4) {
@@ -596,6 +612,16 @@ private struct PetThumb: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .topLeading) {
+            if let level {
+                Text(verbatim: "Lv \(level)")
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 5).padding(.vertical, 1.5)
+                    .background(Capsule().fill(Color.systemAccent.opacity(0.85)))
+                    .foregroundStyle(.white)
+                    .offset(x: -3, y: -3)
+            }
+        }
         .overlay(alignment: .topTrailing) {
             if hovering, let onDelete {
                 Button(action: onDelete) {
