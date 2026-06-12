@@ -1,55 +1,93 @@
 import Foundation
 import AgentPetCore
 
-/// Owns the persistent tamagotchi state: feeds the pet when agents finish
-/// sessions (meals) and when Claude turns consume tokens, persists across
-/// launches, and plays a celebrate burst on level-ups.
+/// Owns the persistent tamagotchi state — one `PetCareState` PER PET, so every
+/// companion levels up on its own depending on how its owner raises it. Food
+/// (finished sessions, Claude tokens) always goes to the currently selected
+/// pet. Persists across launches and plays a celebrate burst on level-ups.
 @MainActor
 final class PetCareController: ObservableObject {
     static let shared = PetCareController()
 
-    @Published private(set) var state = PetCareState()
+    /// Care state per pet id. Only pets that have been fed at least once (or
+    /// were selected while care ran) appear here.
+    @Published private(set) var states: [String: PetCareState] = [:]
 
-    private static let storageKey = "agentpet.care.v1"
+    private static let storageKey = "agentpet.care.v2"
+    private static let legacyKey = "agentpet.care.v1"
 
     init() {
         if let data = UserDefaults.standard.data(forKey: Self.storageKey),
-           let saved = try? JSONDecoder().decode(PetCareState.self, from: data) {
-            state = saved
+           let saved = try? JSONDecoder().decode([String: PetCareState].self, from: data) {
+            states = saved
+        } else if let data = UserDefaults.standard.data(forKey: Self.legacyKey),
+                  let old = try? JSONDecoder().decode(PetCareState.self, from: data) {
+            // v1 kept a single global state: hand it to the selected pet.
+            if let id = UserDefaults.standard.string(forKey: "agentpet.selectedPetID") {
+                states = [id: old]
+                persist()
+            }
+            UserDefaults.standard.removeObject(forKey: Self.legacyKey)
         }
     }
 
-    var level: Int { PetCare.level(forXP: state.xp) }
+    /// The pet currently being raised — feeding goes here.
+    var currentPetID: String? { PetController.shared.selectedPetID }
+
+    /// Care state of the selected pet (a fresh one if it was never fed).
+    var current: PetCareState { state(for: currentPetID) }
+
+    func state(for petID: String?) -> PetCareState {
+        guard let petID else { return PetCareState() }
+        return states[petID] ?? PetCareState()
+    }
+
+    // MARK: - Derived (selected pet)
+
+    var level: Int { PetCare.level(forXP: current.xp) }
     var stageKey: String { PetCare.stageName(forLevel: level) }
     var stageIndex: Int { PetCare.stageIndex(forLevel: level) }
     /// Progress through the current level, 0…1.
-    var levelProgress: Double { PetCare.progress(forXP: state.xp) }
-    var hunger: PetHunger { PetCare.hunger(state: state, now: Date()) }
+    var levelProgress: Double { PetCare.progress(forXP: current.xp) }
+    var hunger: PetHunger { PetCare.hunger(state: current, now: Date()) }
+
+    /// All raised pets, current first, then by XP.
+    var raisedPetIDs: [String] {
+        states.keys.sorted { a, b in
+            if a == currentPetID { return true }
+            if b == currentPetID { return false }
+            return (states[a]?.xp ?? 0) > (states[b]?.xp ?? 0)
+        }
+    }
+
+    // MARK: - Feeding (always the selected pet)
 
     /// A finished agent session — the pet's proper meal.
     func recordMeal() {
-        mutate { PetCare.recordMeal(state: &$0, now: Date()) }
+        mutateCurrent { PetCare.recordMeal(state: &$0, now: Date()) }
     }
 
     /// Tokens consumed by a Claude turn (transcript usage delta).
     func feedTokens(_ tokens: Int) {
         guard tokens > 0 else { return }
-        mutate { PetCare.feedTokens(tokens, state: &$0, now: Date()) }
+        mutateCurrent { PetCare.feedTokens(tokens, state: &$0, now: Date()) }
     }
 
     /// Rolls the daily counters over; UI refresh timers call this so "today"
     /// numbers reset at midnight even with no feeding events.
     func refreshDay() {
-        mutate { PetCare.rollover(&$0, now: Date()) }
+        mutateCurrent { PetCare.rollover(&$0, now: Date()) }
     }
 
-    private func mutate(_ change: (inout PetCareState) -> Void) {
-        let levelBefore = PetCare.level(forXP: state.xp)
-        var s = state
+    private func mutateCurrent(_ change: (inout PetCareState) -> Void) {
+        guard let petID = currentPetID else { return }
+        let levelBefore = PetCare.level(forXP: state(for: petID).xp)
+        var s = state(for: petID)
         change(&s)
-        guard s != state else { return }
-        state = s
+        guard s != states[petID] else { return }
+        states[petID] = s
         persist()
+        CareSyncController.shared.scheduleSync()
         let levelAfter = PetCare.level(forXP: s.xp)
         if levelAfter > levelBefore {
             let line = String(
@@ -61,7 +99,7 @@ final class PetCareController: ObservableObject {
     }
 
     private func persist() {
-        if let data = try? JSONEncoder().encode(state) {
+        if let data = try? JSONEncoder().encode(states) {
             UserDefaults.standard.set(data, forKey: Self.storageKey)
         }
     }

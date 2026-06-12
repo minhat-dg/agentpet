@@ -6,14 +6,23 @@ import AgentPetCore
 struct CareTabView: View {
     @ObservedObject private var care = PetCareController.shared
     @ObservedObject private var usage = OpenUsageClient.shared
+    @ObservedObject private var sync = CareSyncController.shared
+    @ObservedObject private var pet = PetController.shared
+    @ObservedObject private var imagePets = ImagePetStore.shared
     @Environment(\.openURL) private var openURL
 
     /// Ticks so hunger and "today" counters stay fresh while the panel is open.
     @State private var now = Date()
+    @State private var pairCode = ""
+    @State private var pairing = false
     private let tick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     private static let stageIcons = ["leaf.fill", "pawprint.fill", "binoculars.fill", "shield.fill", "crown.fill"]
     private static let stageColors: [Color] = [.green, .teal, .blue, .purple, .orange]
+
+    private var currentName: String {
+        pet.selectedPetID.flatMap { imagePets.pack(id: $0)?.displayName } ?? NSLocalizedString("Your pet", comment: "")
+    }
 
     var body: some View {
         Form {
@@ -29,8 +38,10 @@ struct CareTabView: View {
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
-                            Text(verbatim: "Lv \(care.level)")
+                            Text(verbatim: currentName)
                                 .font(.title3).bold()
+                            Text(verbatim: "Lv \(care.level)")
+                                .font(.title3).foregroundStyle(.secondary)
                             Text(NSLocalizedString(care.stageKey, comment: "evolution stage"))
                                 .font(.caption).bold()
                                 .padding(.horizontal, 8).padding(.vertical, 3)
@@ -44,6 +55,8 @@ struct CareTabView: View {
                     }
                 }
                 .padding(.vertical, 4)
+                Text("Every pet levels up on its own: experience belongs to the companion you raise it with.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             Section("Hunger") {
@@ -51,7 +64,7 @@ struct CareTabView: View {
                     HStack {
                         Text(hungerLabel)
                         Spacer()
-                        if let last = care.state.lastFedAt {
+                        if let last = care.current.lastFedAt {
                             Text(String(format: NSLocalizedString("Last fed %@", comment: ""),
                                         last.formatted(.relative(presentation: .named))))
                                 .font(.caption).foregroundStyle(.secondary)
@@ -68,24 +81,82 @@ struct CareTabView: View {
             Section("Today") {
                 LabeledContent("Tokens eaten") {
                     VStack(alignment: .trailing, spacing: 1) {
-                        Text(verbatim: Self.tokenString(care.state.tokensToday))
-                        if care.state.tokensToday >= PetCare.dailyTokenCap {
+                        Text(verbatim: Self.tokenString(care.current.tokensToday))
+                        if care.current.tokensToday >= PetCare.dailyTokenCap {
                             Text("Full! The daily bowl is empty.")
                                 .font(.caption).foregroundStyle(.orange)
                         }
                     }
                 }
-                LabeledContent("Sessions finished", value: "\(care.state.mealsToday)")
+                LabeledContent("Sessions finished", value: "\(care.current.mealsToday)")
                 LabeledContent("Streak") {
-                    Text(care.state.streakDays == 1
+                    Text(care.current.streakDays == 1
                          ? NSLocalizedString("1 day", comment: "streak singular")
-                         : String(format: NSLocalizedString("%d days", comment: "streak"), care.state.streakDays))
+                         : String(format: NSLocalizedString("%d days", comment: "streak"), care.current.streakDays))
                 }
             }
 
             Section("Lifetime") {
-                LabeledContent("Total tokens eaten", value: Self.tokenString(care.state.totalTokens))
-                LabeledContent("Total sessions", value: "\(care.state.totalMeals)")
+                LabeledContent("Total tokens eaten", value: Self.tokenString(care.current.totalTokens))
+                LabeledContent("Total sessions", value: "\(care.current.totalMeals)")
+            }
+
+            if care.raisedPetIDs.count > 1 {
+                Section("All companions") {
+                    ForEach(care.raisedPetIDs, id: \.self) { id in
+                        companionRow(id: id)
+                    }
+                    Text("Each companion keeps its own experience. Switch pets in the Pet tab to raise another one.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Web profile") {
+                if sync.linked {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Connected to your profile")
+                            if let at = sync.lastSyncAt {
+                                Text(String(format: NSLocalizedString("Last synced %@", comment: ""),
+                                            at.formatted(.relative(presentation: .named))))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            } else {
+                                Text("Your companions appear on your profile page.")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        Button("Disconnect") { sync.disconnect() }.controlSize(.small)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Show your companions on your web profile")
+                        Text("Sign in on the site, open your profile, and enter the pairing code here.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            TextField("Pairing code", text: $pairCode)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 140)
+                            Button(pairing ? "Connecting…" : "Connect") {
+                                let code = pairCode
+                                pairing = true
+                                Task { @MainActor in
+                                    if await sync.pair(code: code) { pairCode = "" }
+                                    pairing = false
+                                }
+                            }
+                            .disabled(pairCode.trimmingCharacters(in: .whitespaces).count < 4 || pairing)
+                            Button("Open profile") {
+                                openURL(URL(string: "https://agentpet.thenightwatcher.online/profile")!)
+                            }
+                            .controlSize(.small)
+                        }
+                        if let err = sync.lastError {
+                            Text(err).font(.caption).foregroundStyle(.red)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
             }
 
             Section("Food sources") {
@@ -146,13 +217,51 @@ struct CareTabView: View {
         }
     }
 
+    // MARK: - Companions
+
+    @ViewBuilder
+    private func companionRow(id: String) -> some View {
+        let s = care.state(for: id)
+        let lv = PetCare.level(forXP: s.xp)
+        let idx = PetCare.stageIndex(forLevel: lv)
+        let color = Self.stageColors[min(idx, Self.stageColors.count - 1)]
+        HStack(spacing: 10) {
+            Image(systemName: Self.stageIcons[min(idx, Self.stageIcons.count - 1)])
+                .font(.system(size: 13))
+                .foregroundStyle(color)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(verbatim: imagePets.pack(id: id)?.displayName ?? id)
+                        .font(.system(size: 13, weight: .semibold))
+                    if id == care.currentPetID {
+                        Text("Raising").font(.caption2).bold()
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Capsule().fill(Color.systemAccent.opacity(0.2)))
+                            .foregroundStyle(Color.systemAccent)
+                    }
+                }
+                ProgressView(value: PetCare.progress(forXP: s.xp))
+                    .tint(color)
+                    .controlSize(.small)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(verbatim: "Lv \(lv)").font(.system(size: 12, weight: .bold))
+                Text(verbatim: "\(Self.plain(s.xp)) XP")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
     // MARK: - Derived display
 
     private var stageIcon: String { Self.stageIcons[min(care.stageIndex, Self.stageIcons.count - 1)] }
     private var stageColor: Color { Self.stageColors[min(care.stageIndex, Self.stageColors.count - 1)] }
 
     private var xpCaption: String {
-        let xp = care.state.xp
+        let xp = care.current.xp
         let next = PetCare.xpToReach(level: care.level + 1)
         return String(format: NSLocalizedString("%@ / %@ XP to next level", comment: ""),
                       Self.plain(xp), Self.plain(next))
@@ -160,7 +269,7 @@ struct CareTabView: View {
 
     /// Continuous fullness 0…1 from the time since the last feeding (48h → empty).
     private var fullness: Double {
-        guard let last = care.state.lastFedAt else { return 0.5 }
+        guard let last = care.current.lastFedAt else { return 0.5 }
         let hours = now.timeIntervalSince(last) / 3600
         return max(0, min(1, 1 - hours / 48))
     }
