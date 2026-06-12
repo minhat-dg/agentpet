@@ -86,7 +86,7 @@ struct PetStatsView: View {
     // MARK: - XP
 
     private func xpBlock(_ state: PetCareState) -> some View {
-        let next = PetCare.xpToReach(level: care.level + 1)
+        let next = PetCare.xpToReach(level: care.level + 2)  // display+2 = internal+1
         return VStack(alignment: .leading, spacing: 4) {
             ProgressView(value: care.levelProgress).tint(stageColor).controlSize(.small)
             HStack {

@@ -288,7 +288,9 @@ struct CareTabView: View {
 
     private var xpCaption: String {
         let xp = care.current.xp
-        let next = PetCare.xpToReach(level: care.level + 1)
+        // care.level is the display level (internal − 1); the next internal
+        // threshold is xpToReach(internal + 1) = xpToReach(displayLevel + 2).
+        let next = PetCare.xpToReach(level: care.level + 2)
         return String(format: NSLocalizedString("%@ / %@ XP to next level", comment: ""),
                       Self.plain(xp), Self.plain(next))
     }
