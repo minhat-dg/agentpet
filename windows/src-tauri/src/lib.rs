@@ -30,6 +30,29 @@ struct HitRect {
     h: f64,
 }
 
+/// Append a line to %APPDATA%/AgentPet/debug.log , lightweight field
+/// diagnostics for the Windows build (no console there).
+fn dlog(msg: &str) {
+    if let Some(p) = dirs::config_dir().map(|d| d.join("AgentPet").join("debug.log")) {
+        if let Some(dir) = p.parent() {
+            let _ = std::fs::create_dir_all(dir);
+        }
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(p) {
+            use std::io::Write;
+            let ts = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
+            let _ = writeln!(f, "[{ts}] {msg}");
+        }
+    }
+}
+
+#[tauri::command]
+fn log_debug(msg: String) {
+    dlog(&msg);
+}
+
 fn pos_file() -> Option<std::path::PathBuf> {
     dirs::config_dir().map(|d| d.join("AgentPet").join("pos"))
 }
@@ -107,15 +130,23 @@ fn toggle_install(kind: String) -> Result<bool, String> {
 
 #[tauri::command]
 fn open_settings(app: tauri::AppHandle) {
+    dlog("open_settings called");
     if let Some(w) = app.get_webview_window("settings") {
+        dlog("open_settings: existing window, showing");
+        let _ = w.show();
+        let _ = w.unminimize();
         let _ = w.set_focus();
         return;
     }
-    let _ = WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
+    match WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
         .title("AgentPet")
         .inner_size(640.0, 620.0)
         .resizable(false)
-        .build();
+        .build()
+    {
+        Ok(_) => dlog("open_settings: window created"),
+        Err(e) => dlog(&format!("open_settings: BUILD FAILED: {e}")),
+    }
 }
 
 /// Open an external link in the default browser (About tab buttons).
@@ -196,6 +227,7 @@ fn show_popover(app: &tauri::AppHandle) {
                 .build()
             {
                 Ok(w) => {
+                    dlog("popover: window created");
                     // Transient popover: losing focus hides it (Rust-side net,
                     // independent of the webview's own blur listener).
                     let wh = w.clone();
@@ -206,7 +238,10 @@ fn show_popover(app: &tauri::AppHandle) {
                     });
                     w
                 }
-                Err(_) => return,
+                Err(e) => {
+                    dlog(&format!("popover: BUILD FAILED: {e}"));
+                    return;
+                }
             }
         }
     };
@@ -284,6 +319,7 @@ pub fn run() {
             set_pet_visible,
             get_pet_visible,
             open_popover,
+            log_debug,
             set_hit_rect
         ])
         .setup(|app| {
@@ -335,22 +371,37 @@ pub fn run() {
                     };
 
                     // Cross-platform (tao): cursor + window in physical px.
-                    if let (Ok(cur), Ok(wp)) = (handle.cursor_position(), win.outer_position()) {
-                        let inside = handle
-                            .try_state::<Mutex<HitRect>>()
-                            .and_then(|s| s.lock().ok().map(|r| (r.x, r.y, r.w, r.h)))
-                            .map(|(x, y, w, h)| {
-                                let rx = cur.x - wp.x as f64;
-                                let ry = cur.y - wp.y as f64;
-                                w > 0.0 && rx >= x && rx <= x + w && ry >= y && ry <= y + h
-                            })
-                            .unwrap_or(false);
-                        // ignore_cursor_events = true  -> clicks pass through.
-                        let ignore = !inside;
-                        if Some(ignore) != last_ignore {
-                            let _ = win.set_ignore_cursor_events(ignore);
-                            last_ignore = Some(ignore);
+                    // Fail-safe: while the hit rect is unknown (webview still
+                    // booting) or the cursor can't be read, keep the window
+                    // INTERACTIVE , a clickable pet beats an untouchable one.
+                    match (handle.cursor_position(), win.outer_position()) {
+                        (Ok(cur), Ok(wp)) => {
+                            let rect = handle
+                                .try_state::<Mutex<HitRect>>()
+                                .and_then(|s| s.lock().ok().map(|r| (r.x, r.y, r.w, r.h)));
+                            let inside = match rect {
+                                Some((x, y, w, h)) if w > 0.0 => {
+                                    let rx = cur.x - wp.x as f64;
+                                    let ry = cur.y - wp.y as f64;
+                                    rx >= x && rx <= x + w && ry >= y && ry <= y + h
+                                }
+                                _ => true, // no rect yet , stay interactive
+                            };
+                            // ignore_cursor_events = true -> clicks pass through.
+                            let ignore = !inside;
+                            if Some(ignore) != last_ignore {
+                                let _ = win.set_ignore_cursor_events(ignore);
+                                last_ignore = Some(ignore);
+                            }
                         }
+                        (Err(e), _) => {
+                            if last_ignore != Some(false) {
+                                dlog(&format!("cursor_position error: {e} , forcing interactive"));
+                                let _ = win.set_ignore_cursor_events(false);
+                                last_ignore = Some(false);
+                            }
+                        }
+                        _ => {}
                     }
 
                     tick = tick.wrapping_add(1);
@@ -423,6 +474,7 @@ pub fn run() {
                 }
             }
 
+            dlog("setup complete, tray + loop running");
             // First run: open Settings so the user knows to pick a pet and
             // connect an agent (otherwise the pet just sits there silently).
             let marker = dirs::config_dir().map(|d| d.join("AgentPet").join(".onboarded"));

@@ -139,6 +139,11 @@ export class Pet {
     // A pre-CORS cached copy makes the crossOrigin load fail , retry plain
     // (displayable, but slicing falls back to the fixed grid).
     img.onerror = () => {
+      // Diagnostics for the Windows build (debug.log via Rust).
+      try {
+        // @ts-ignore tauri global (withGlobalTauri)
+        window.__TAURI__?.core?.invoke?.("log_debug", { msg: `sprite CORS load failed, plain retry: ${spritesheetUrl.slice(0, 80)}` });
+      } catch {}
       const plain = new Image();
       plain.onload = () => {
         this.img = plain;

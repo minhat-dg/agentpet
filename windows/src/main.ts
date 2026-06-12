@@ -262,7 +262,9 @@ listen("bubble-changed", () => { applyBubble(); applyPet(); moodLine = ""; rende
 // where transparent pixels never catch the mouse).
 canvas.addEventListener("mousedown", async (e) => {
   if (e.button !== 0) return;
-  if (!pet.hitTest(e.offsetX, e.offsetY)) return;
+  // While the sheet is still loading there is no sprite rect yet , allow the
+  // drag anyway so the pet is never untouchable.
+  if (pet.spriteRect && !pet.hitTest(e.offsetX, e.offsetY)) return;
   emit("popover-close", null);
   await getCurrentWindow().startDragging();
 });
@@ -313,7 +315,8 @@ function reportHitRect() {
   const sig = [left, top, right, bottom].map((v) => Math.round(v)).join(",");
   if (sig === lastHitSig) return;
   lastHitSig = sig;
-  invoke("set_hit_rect", { x: left * d, y: top * d, w: (right - left) * d, h: (bottom - top) * d }).catch(() => {});
+  invoke("set_hit_rect", { x: left * d, y: top * d, w: (right - left) * d, h: (bottom - top) * d })
+    .catch((err) => invoke("log_debug", { msg: `set_hit_rect failed: ${err}` }).catch(() => {}));
 }
 new ResizeObserver(reportHitRect).observe(petRoot);
 window.addEventListener("resize", reportHitRect);
