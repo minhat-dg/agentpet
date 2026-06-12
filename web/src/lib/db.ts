@@ -39,6 +39,12 @@ export async function ensureSchema(db: any): Promise<void> {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_pet_requests_status ON pet_requests (status)"),
     db.prepare("CREATE TABLE IF NOT EXISTS pet_numbers (slug TEXT PRIMARY KEY, num INTEGER NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS pet_meta (slug TEXT PRIMARY KEY, color TEXT)"),
+    // Tamagotchi sync: short-lived pairing codes, long-lived device tokens, and
+    // the per-user per-pet care stats pushed by the desktop app.
+    db.prepare("CREATE TABLE IF NOT EXISTS care_pair_codes (code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires_at INTEGER NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS care_devices (token TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT 0)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS care_pets (user_id INTEGER NOT NULL, pet_id TEXT NOT NULL, name TEXT, xp INTEGER NOT NULL DEFAULT 0, tokens INTEGER NOT NULL DEFAULT 0, meals INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, last_fed_at INTEGER, updated_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, pet_id))"),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_care_pets_user ON care_pets (user_id)"),
   ]);
   ready = true;
 }
