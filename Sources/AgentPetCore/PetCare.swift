@@ -146,9 +146,10 @@ public enum PetCare {
         state.tokensToday += counted
 
         // Daily history for the weekly trend (full burn, not just the capped
-        // part). Pruned to the most recent 14 entries.
+        // part). Pruned to the most recent 14 entries. States saved before the
+        // field existed seed today's entry from the running daily counter.
         let today = dayKey(for: now, calendar: calendar)
-        var days = state.days ?? [:]
+        var days = state.days ?? [today: max(0, state.tokensToday - counted)]
         days[today, default: 0] += tokens
         if days.count > 14 {
             for key in days.keys.sorted().dropLast(14) { days.removeValue(forKey: key) }

@@ -148,10 +148,13 @@ final class PetCareTests: XCTestCase {
     }
 
     func testOldStateWithoutDaysStillDecodes() throws {
-        let old = #"{"xp":100,"tokenCarry":0,"tokensToday":0,"mealsToday":0,"totalTokens":100,"totalMeals":1,"dayKey":"2026-06-11","streakDays":1}"#
-        let s = try JSONDecoder().decode(PetCareState.self, from: old.data(using: .utf8)!)
+        let old = #"{"xp":100,"tokenCarry":0,"tokensToday":50000,"mealsToday":0,"totalTokens":100,"totalMeals":1,"dayKey":"2026-06-12","streakDays":1}"#
+        var s = try JSONDecoder().decode(PetCareState.self, from: old.data(using: .utf8)!)
         XCTAssertNil(s.days)
         XCTAssertEqual(s.xp, 100)
+        // First feed after migrating seeds today's history from the running counter.
+        PetCare.feedTokens(10_000, state: &s, now: date("2026-06-12 12:00"), calendar: calendar)
+        XCTAssertEqual(s.days?["2026-06-12"], 60_000)
     }
 
     func testStatePersistsThroughCodable() throws {
